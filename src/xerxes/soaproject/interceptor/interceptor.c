@@ -3,7 +3,7 @@
 #include <linux/module.h>
 #include <linux/list.h>
 #include <linux/slab.h>
-#include "sci_lin.h"
+#include "interceptor.h"
 
 MODULE_DESCRIPTION("Interceptare apeluri sistem");
 MODULE_AUTHOR("Claudia Tanase");
@@ -24,71 +24,77 @@ old_sys_call old_sys_calls[NR_syscalls];
 
 
 
+asmlinkage long my_sys_mkdir(const char __user *pathname, int mode) {
 
+	//send interesting data to server
 
-
-
-
-static int add_moni(pid_t pid, int syscall)
-{
-        struct monitor_list *ple = (struct monitor_list*) kmalloc(sizeof(struct monitor_list), GFP_KERNEL);
-
-        if (!ple)
-                return -ENOMEM;
-
-        INIT_LIST_HEAD(&ple->list);
-        ple->pid = pid;
-		ple->syscall = syscall;
-        list_add(&ple->list, &my_moni_list);
-
-        return 0;
+	//call old sys_mkdir
+	return sys_mkdir(pathname, mode);
 }
 
-static int del_moni(pid_t pid, int syscall)
-{
-        struct list_head *i, *n;
-        struct monitor_list *ple;
+asmlinkage long my_sys_open(const char __user *filename, int flags, int mode) {
 
-        list_for_each_safe(i, n, &my_moni_list) {
-                ple = list_entry(i, struct monitor_list, list);
-                if (((ple->pid == pid) || (pid == 0)) && ((ple->syscall == syscall) || (syscall == 0) )) {
-						list_del(i);
-                        kfree(ple);
-                        return 0;
-                }
-        }
+		//send interesting data to server
 
-        return -EINVAL;
+		//call old syscall
+		return sys_open(filename, int flags, mode);
 }
 
-static int find_moni(pid_t pid, int syscall)
-{	
-		struct list_head *i;
-        struct monitor_list *ple;
+asmlinkage long my_sys_creat(const char __user * pathname, int mode) {
 
-        list_for_each(i, &my_moni_list) {
-                ple = list_entry(i, struct monitor_list, list);
-                if ((ple->pid == pid) && ((ple->syscall == syscall) ||(syscall == 0) )) {
-						return 1;
-                }
-        }      
+	//send interesting data to server
 
-        return 0;
+	//call old syscall
+	return sys_creat(pathname, mode);
+}
+
+asmlinkage ssize_t my_sys_write(unsigned int fd, const char __user * buf, size_t count) {
+
+	//send interesting data to server
+
+	//call old syscall
+	return sys_write(fd, buf, count);
+}
+
+asmlinkage long my_sys_link(const char __user *oldname, const char __user *newname) {
+
+	//send interesting data to server
+
+	//call old syscall
+	return sys_link(oldname, newname);
+}
+
+asmlinkage long my_sys_unlink(const char __user *pathname) {
+
+	//send interesting data to server
+
+	//call old syscall
+	return sys_unlink(pathname);
 }
 
 
-static int destroy_list(void)
-{
-        struct list_head *i, *n;
-        struct monitor_list *ple;
+asmlinkage long my_sys_mknod(const char __user *filename, int mode, unsigned dev) {
 
-        list_for_each_safe(i, n, &my_moni_list) {
-                ple = list_entry(i, struct monitor_list, list);
-                list_del(i);
-                kfree(ple);
-        }
+	//send interesting data to server
 
-		return 0;
+	//call old syscall
+	return sys_mknod(filename, mode, dev);
+}
+
+asmlinkage long my_sys_rmdir(const char __user *pathname) {
+	
+	//send interesting data to server
+
+	//call old syscall
+	return sys_rmdir(pathname);
+}
+
+asmlinkage long my_sys_rename(const char __user *oldname, const char __user *newname) {
+
+	//send interesting data to server
+
+	//call old syscall
+	return sys_rename(oldname, newname);
 }
 
 
@@ -98,18 +104,17 @@ static int destroy_list(void)
 
 //functia care face interceptarea efectiva 
 static asmlinkage long interceptor(struct pt_regs regs){
-    	long ret;
-	struct list_head *i;
-	struct monitor_list *ple;
-        
-	//printk(KERN_DEBUG "Am interceptat apelul de sistem");
+    long ret;
+	        
+	printk(KERN_DEBUG "Am interceptat apelul de sistem %ld\n", regs.eax);
 	
 	//apelez vechiul apel de system
-    	old_call = old_sys_calls[regs.eax];
-    	ret = old_call(regs);
+    old_call = old_sys_calls[regs.eax];
+    ret = old_call(regs);
 
 	return ret;
 }
+
 
 //rutina care imi inlocuieste vechiul apel de sistem cu cel nou 
 asmlinkage long my_syscall(int cmd, int syscall, int pid){
@@ -129,11 +134,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid){
 		//daca am interceptat deja apelul de sistem => eroare
 		if(sys_call_table[syscall] == interceptor)
 			return -EBUSY;
-
-		//nu pot sa interceptez apelul de sistem exit pt ca il interceptez la incarcarea modulului
-		if(sys_call_table[syscall] == my_exit)
-			return -EINVAL;
-	    
+			    
 		//inlocuiesc apelul de sistem initial cu apelul meu de interceptare
 		old_sys_calls[syscall] = sys_call_table[syscall];
 		sys_call_table[syscall] = interceptor;
@@ -141,24 +142,18 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid){
     	}
 
    	//DEINTERCEPTARE
-    	if(cmd == REQUEST_SYSCALL_RELEASE){
+    if(cmd == REQUEST_SYSCALL_RELEASE){
 		//Utilizatorul neprivilegiat nu poate deintercepta un apel de sistem
 		if(current->uid != 0)
 			return -EPERM;
 			
 		//nu pot deintercepta un apel pe care nu lam interceptat
-	    	if(sys_call_table[syscall] != interceptor)
-			return -EINVAL; 	
-
-		//nu pot deintercepta apelul de sistem exit => eroare
-		if(sys_call_table[syscall] == my_exit)
-			return -EINVAL;
-	    
-		//opresc monitorizarile pt apelul de sistem dat
-		del_moni(0,syscall);
-
-	    //trebuie sa opresc interceptarea functiei => restaurez functia initiala
+		if(sys_call_table[syscall] != interceptor)
+			return -EINVAL; 			    
+		
+		//trebuie sa opresc interceptarea functiei => restaurez functia initiala
 		sys_call_table[syscall] = old_sys_calls[syscall];
+	
 		return 0;
     }
     
@@ -167,35 +162,45 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid){
 }
 
 
-
 //initalizarea modulului meu
-static int my_module_init(void){
+static int my_module_init(void) {
     	int i;
 
 	printk(KERN_DEBUG "My module init\n"); 
 
 	//inlocuiesc in tabela de apeluri de sistem apelul 0 cu my_syscall
 	old_sys_calls[MY_SYSCALL_NO] = sys_call_table[MY_SYSCALL_NO];
-    	sys_call_table[MY_SYSCALL_NO] = my_syscall;
-
+    sys_call_table[MY_SYSCALL_NO] = my_syscall;
 	    
 	//si copiez pt a putea reface mai tarziu , tabela de apeluri de sistem
 	for (i = 1; i < NR_syscalls; i++) {
 		old_sys_calls[i] = sys_call_table[i];
 	}      
+
+	//inlocuiesc apelul de sistem initial cu apelul meu de interceptare	
+	sys_call_table[__NR_open] = my_sys_open;	
+	sys_call_table[__NR_write] = my_sys_write;	
+	sys_call_table[__NR_creat] = my_sys_creat;
+	sys_call_table[__NR_link] = my_sys_link;
+	sys_call_table[__NR_unlink] = my_sys_unlink;
+	sys_call_table[__NR_mknod] = my_sys_mknod;
+	sys_call_table[__NR_chown] = interceptor;
+	sys_call_table[__NR_rename] = my_sys_rename;
+	sys_call_table[__NR_mkdir] = my_sys_mkdir;
+	sys_call_table[__NR_rmdir] = my_sys_rmdir;	
     
 	return 0;
 }
 
-static void my_module_exit(void){
-    	int i;
+static void my_module_exit(void) {
+	int i;
 
 	//la iesire am grija sa refac tabela veche de apeluri de sistem
-    	sys_call_table[MY_SYSCALL_NO] = old_sys_calls[MY_SYSCALL_NO];
-	sys_call_table[__NR_exit] = old_exit;
+   	sys_call_table[MY_SYSCALL_NO] = old_sys_calls[MY_SYSCALL_NO];
+	
  
-    	for (i = 1; i < NR_syscalls; i++){
-	    sys_call_table[i] = old_sys_calls[i];
+   	for (i = 1; i < NR_syscalls; i++){
+		sys_call_table[i] = old_sys_calls[i];
 	}
     
 	
