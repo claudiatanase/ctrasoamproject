@@ -8,17 +8,19 @@ Status report for week 6.
 
 Razvan Alecsandrescu: 
 
-- Tasks programmed until 11.13.2008 :
-* Database 
-* Server 
-* Testing 
-* Documentation
+- Tasks programmed until 11.13.2008:
+
+#Database 
+#Server 
+#Testing 
+#Documentation
 
 - Tasks completed (11.11.2008):
-* Documentation
-* Database
-* Server (40%)
-* Modules (10%)
+
+#Documentation
+#Database
+#Server (40%)
+#Modules (10%)
 
 I'm on schedule. Actually a little ahead of schedule but I haven't started running into the really difficult problems of this project. And I also rule so that's a plus.
 
