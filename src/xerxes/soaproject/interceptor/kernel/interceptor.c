@@ -218,7 +218,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid){
 
 
 
-
+/*
 void input (struct sock *sk, int len)
 {
  
@@ -226,13 +226,13 @@ void input (struct sock *sk, int len)
 	/ * process netlink message pointed by skb->data * /
 	nlh = (struct nlmsghdr *)skb->data;
 	payload = NLMSG_DATA(nlh);
-	printk("%s: received netlink message payload:%s\n", __FUNCTION__, NLMSG_DATA(nlh));
+	printk("%s: received netlink message payload:%s\n", __FUNCTION__, (char*)NLMSG_DATA(nlh));
 	/ * process netlink message with header pointed by
 	* nlh	and payload pointed by payload
 	* /
  }
 }
-
+*/
 
 void output(u32 pid) {
 
@@ -247,7 +247,7 @@ void output(u32 pid) {
 void input2 (struct sock *sk, int len) {
 
 	nlh = (struct nlmsghdr *)skb->data;
-	printk("%s: received netlink message payload:%s\n", __FUNCTION__, NLMSG_DATA(nlh));
+	printk("%s: received netlink message payload:%s\n", __FUNCTION__, (char*)NLMSG_DATA(nlh));
 	userspace_pid = nlh->nlmsg_pid; /*pid of sending process */
 
 	output(userspace_pid);
@@ -261,7 +261,7 @@ void nl_data_ready (struct sock *sk, int len)
 
 void netlink_test() {
  
-	nl_sk = netlink_kernel_create(NETLINK_TEST, nl_data_ready);
+	nl_sk = netlink_kernel_create(NETLINK_UNUSED, 0, nl_data_ready, NULL);
 	if (nl_sk<0)
 		printk(KERN_INFO "ERROR IN NETLINK CREATION");
 
@@ -269,7 +269,7 @@ void netlink_test() {
 
 	nlh = (struct nlmsghdr *)skb->data;
 
-	printk(KERN_INFO ": received netlink message payload: %s\n", NLMSG_DATA(nlh));
+	printk(KERN_INFO ": received netlink message payload: %s\n", (char*)NLMSG_DATA(nlh));
 
 	pid=nlh->nlmsg_pid;
 
@@ -361,7 +361,7 @@ static int my_module_init(void) {
 }
 
 static void my_module_exit(void) {
-	int i;
+	//int i;
 
 #if 0
 	//la iesire am grija sa refac tabela veche de apeluri de sistem
