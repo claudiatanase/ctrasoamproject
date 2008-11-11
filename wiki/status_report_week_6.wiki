@@ -27,9 +27,11 @@ I'm on schedule. Actually a little ahead of schedule but I haven't started runni
 No signifiant problems encountered. Spent some time searching for the best method to load classes dynamically ( parsing modules can and will be added to the project later and this shouldn't mean that the project must be rebuilt).
 
 - Self-assesment.
-As always yours truly shows outstanding coding skills, motivation and may I say sings of genius. Modesty is another of my qualities.
+As always yours truly shows outstanding coding skills, motivation and may I say signs of genius. Modesty is another one of my qualities.
+
 - Assesment of technologies used
 They work. The right tools for the right job.
+
 - ?
-Best caching solution for searches and answers.
-Best entry point for C code.
+* Best caching solution for searches and answers.
+* Best entry point for C code.
