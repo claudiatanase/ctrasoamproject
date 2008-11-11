@@ -10,8 +10,7 @@ Task Plan
 = 1. Objective: =
 The purpose of our project is to develop an advanced system used for file organization and localization that would integrate seamless with an existing OS. To accomplish that we will be using a combination of normal search, semantic labeling and Virtual Folders. Depending on time constraints the project can be further improved with a distributed component that would allow the same functionality over large networks of computers.
 
-= 2. Technologies and specifications: =
-The technologies used are as follows:
+=== 2. Technologies and specifications: ===
 * C for the following components:
 ** Kernel Space module
 ** User Space control application
