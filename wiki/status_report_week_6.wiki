@@ -8,32 +8,32 @@ Status report for week 6.
 
 Razvan Alecsandrescu: 
 
-- Tasks programmed until 11.13.2008:
+== Tasks programmed until 11.13.2008: ==
 
-#Database 
-#Server 
-#Testing 
-#Documentation
+* Database
+* Server
+* Testing
+* Documentation
 
-- Tasks completed (11.11.2008):
+== Tasks completed (11.11.2008) ==
 
-#Documentation
-#Database
-#Server (40%)
-#Modules (10%)
+* Documentation
+* Database
+* Server (40%)
+* Modules (10%)
 
 I'm on schedule. Actually a little ahead of schedule but I haven't started running into the really difficult problems of this project. And I also rule so that's a plus.
 
-- Encountered problems and changes performed.
+== Encountered problems and changes performed ==
 
 No signifiant problems encountered. Spent some time searching for the best method to load classes dynamically ( parsing modules can and will be added to the project later and this shouldn't mean that the project must be rebuilt).
 
-- Self-assesment.
+== Self-assesment ==
 As always yours truly shows outstanding coding skills, motivation and may I say signs of genius. Modesty is another one of my qualities.
 
-- Assesment of technologies used
+== Assesment of technologies used ==
 They work. The right tools for the right job.
 
-- ?
+== ? ==
 * Best caching solution for searches and answers.
 * Best entry point for C code.
