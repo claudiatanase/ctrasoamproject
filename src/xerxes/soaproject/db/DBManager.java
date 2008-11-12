@@ -14,6 +14,7 @@ import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.TreeMap;
 import java.util.Vector;
 
@@ -57,40 +58,31 @@ public class DBManager {
 			Statement stmt = con.createStatement();
 			// creare DB
 
-			stmt.executeUpdate("CREATE TABLE if not exists `tags` ("
-					+ "  `TagId` int(11) NOT NULL AUTO_INCREMENT,"
-					+ "  `FileName` varchar(255) NOT NULL,"
-					+ "  `FilePath` varchar(255) NOT NULL,"
-					+ "  `Tag` varchar(255) NOT NULL,"
-					+ "  `Time` datetime NOT NULL,"
-					+ "  PRIMARY KEY  (`TagId`,`FilePath`)"
-					+ ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
-			stmt.executeUpdate("CREATE TABLE if not exists `MFileList` ("
-					+ "  `MFileId` int(11) NOT NULL AUTO_INCREMENT,"
-					+ "  `MFileName` varchar(255) NOT NULL,"
-					+ "  `MFilePath` varchar(255) NOT NULL,"
-					+ "  `MFileType` int(11) NOT NULL,"
-					+ "  `MFileFlag` int(11) NOT NULL,"
-					+ "  `Tainted` int(11) NOT NULL,"
-					+ "  `Time` datetime NOT NULL,"
-					+ "  PRIMARY KEY  (`MFileId`,`MFilePath`)"
-					+ ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
-			stmt
-					.executeUpdate("CREATE TABLE `answerid` ("
-							+ "  `AId` int(11) NOT NULL AUTO_INCREMENT,"
-							+ "  `SearchID` int(11) NOT NULL,"
-							+ "  `MFId` int(11) NOT NULL,  "
-							+ "  PRIMARY KEY  (`AId`,`SearchID`),"
-							+ "  KEY `MFConstraint` (`MFId`),  CONSTRAINT `MFConstraint` "
-							+ "  FOREIGN KEY (`MFId`) REFERENCES `mfilelist` (`MFileId`) "
-							+ "  ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
-			stmt.executeUpdate("CREATE TABLE `searchcache` ("
-					+ "`SCId` int(11) NOT NULL AUTO_INCREMENT,"
-					+ "`SearchId` int(11) NOT NULL,"
-					+ "`SearchTerm` varchar(255) NOT NULL,"
-					+ "PRIMARY KEY  (`SCId`,`SearchId`)"
-					+ ") ENGINE=InnoDB DEFAULT CHARSET=latin1;" + ")");
-
+			/*
+			 * stmt.executeUpdate("CREATE TABLE if not exists `tags` (" + "
+			 * `TagId` int(11) NOT NULL AUTO_INCREMENT," + " `FileName`
+			 * varchar(255) NOT NULL," + " `FilePath` varchar(255) NOT NULL," + "
+			 * `Tag` varchar(255) NOT NULL," + " `Time` datetime NOT NULL," + "
+			 * PRIMARY KEY (`TagId`,`FilePath`)" + ") ENGINE=InnoDB DEFAULT
+			 * CHARSET=latin1;"); stmt.executeUpdate("CREATE TABLE if not exists
+			 * `MFileList` (" + " `MFileId` int(11) NOT NULL AUTO_INCREMENT," + "
+			 * `MFileName` varchar(255) NOT NULL," + " `MFilePath` varchar(255)
+			 * NOT NULL," + " `MFileType` int(11) NOT NULL," + " `MFileFlag`
+			 * int(11) NOT NULL," + " `Tainted` int(11) NOT NULL," + " `Time`
+			 * datetime NOT NULL," + " PRIMARY KEY (`MFileId`,`MFilePath`)" + ")
+			 * ENGINE=InnoDB DEFAULT CHARSET=latin1;"); stmt
+			 * .executeUpdate("CREATE TABLE `answerid` (" + " `AId` int(11) NOT
+			 * NULL AUTO_INCREMENT," + " `SearchID` int(11) NOT NULL," + "
+			 * `MFId` int(11) NOT NULL, " + " PRIMARY KEY (`AId`,`SearchID`)," + "
+			 * KEY `MFConstraint` (`MFId`), CONSTRAINT `MFConstraint` " + "
+			 * FOREIGN KEY (`MFId`) REFERENCES `mfilelist` (`MFileId`) " + " ON
+			 * DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
+			 * stmt.executeUpdate("CREATE TABLE `searchcache` (" + "`SCId`
+			 * int(11) NOT NULL AUTO_INCREMENT," + "`SearchId` int(11) NOT
+			 * NULL," + "`SearchTerm` varchar(255) NOT NULL," + "PRIMARY KEY
+			 * (`SCId`,`SearchId`)" + ") ENGINE=InnoDB DEFAULT CHARSET=latin1;" +
+			 * ")");
+			 */
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -219,15 +211,43 @@ public class DBManager {
 	public void addTag(String tagName) {
 		try {
 
-			PreparedStatement stmt = con
-					.prepareStatement("insert into taglist values (0,?)");
-			stmt.setString(1, tagName);
-			stmt.executeUpdate();
+			if (!tagExists(tagName)) {
+				PreparedStatement stmt = con
+						.prepareStatement("insert into taglist values (0,?)");
+				stmt.setString(1, tagName);
+				stmt.executeUpdate();
+			}
 
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 
+	}
+
+	/**
+	 * Tests if tag exists
+	 * 
+	 * @param tagName
+	 * @return
+	 */
+	public boolean tagExists(String tagName) {
+		boolean found = false;
+		try {
+			PreparedStatement stmt = con
+					.prepareStatement("select count(*) as count from tagList where TagName=?");
+
+			stmt.setString(1, tagName);
+			stmt.execute();
+			ResultSet rs = stmt.getResultSet();
+			while (rs.next()) {
+				String numar = (rs.getString("count"));
+				if (Integer.parseInt(numar) != 0)
+					found = true;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return found;
 	}
 
 	/**
@@ -306,30 +326,67 @@ public class DBManager {
 	}
 
 	/**
-	 * Sets tags for a file
 	 * 
-	 * @param fileName
-	 * @param filePath
+	 * @param fileId
 	 * @param tags
 	 */
-	public void markFile(String fileName, String filePath, String[] tags) {
-		filePath = filePath.replace(File.separatorChar, '/');
+	public void markFile(int fileId, String[] tags) {
+
 		try {
 
 			PreparedStatement stmtInsert = con
-					.prepareStatement("insert into tags values(0,?,?,?,?)");
+					.prepareStatement("insert into tags values(0,?,?,?)");
 			Date d = new Date(Calendar.getInstance().getTimeInMillis());
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			for (int i = 0; i < tags.length; i++) {
-				stmtInsert.setString(1, fileName);
-				stmtInsert.setString(2, filePath);
-				stmtInsert.setInt(3, getTagIdByName(tags[i]));
-				stmtInsert.setString(4, sdf.format(d).toString());
+				stmtInsert.setInt(1, fileId);
+
+				stmtInsert.setInt(2, getTagIdByName(tags[i]));
+				stmtInsert.setString(3, sdf.format(d).toString());
 			}
 
 		} catch (SQLException e) {
 
 		}
+	}
+
+	public HashSet<String> getTagsForFile(String filePath) {
+		HashSet<String> tags = new HashSet<String>();
+
+		try {
+			PreparedStatement t = con
+					.prepareStatement("select * from mfilelist,tags,taglist where mfilelist.MFilePath=? and mfilelist.MFileId= tags.fileId and tags.tag=taglist.tagId");
+			t.setString(1, filePath);
+			t.execute();
+			ResultSet rs = t.getResultSet();
+
+			while (rs.next()) {
+				tags.add(rs.getString("TagName"));
+
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return tags;
+	}
+
+	/**
+	 * Get Files with tags
+	 */
+	public Vector<String> getFilesWithTag(String tag){
+		Vector<String> files=new Vector<String>();
+ 		try{
+			PreparedStatement stmt=con.prepareStatement("select * from tags,mfilelist,taglist where taglist.tagName= ? and taglist.TagId = tags.Tag and taglist.FileId = mfilelist.mfileId");
+			stmt.setString(1, tag);
+			stmt.execute();
+			ResultSet rs=stmt.getResultSet();
+			while(rs.next()){
+				files.add(rs.getString("mfilepath"));
+			}
+		}catch(SQLException e ){
+			e.printStackTrace();
+		}
+		return files;
 	}
 
 	/**
