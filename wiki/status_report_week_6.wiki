@@ -39,7 +39,7 @@ They work. The right tools for the right job.
 * Best entry point for C code.
 
 
-= Claudia Tanase: =
+== Claudia Tanase ==
 
 == Tasks programmed until 13.11.2008: ==
 
