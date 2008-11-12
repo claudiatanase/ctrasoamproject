@@ -50,11 +50,13 @@ They work. The right tools for the right job.
 
 == Tasks programmed until 13.11.2008: ==
 
-* Kernel module which intercepts system calls
+ - Kernel module which intercepts system calls
 
-* Testing the kernel module
 
-* Documentation
+ - Testing the kernel module
+
+
+ - Documentation
 
 
 == Tasks completed (11.11.2008) ==
