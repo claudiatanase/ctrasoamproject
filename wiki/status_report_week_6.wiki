@@ -44,14 +44,18 @@ They work. The right tools for the right job.
 == Tasks programmed until 13.11.2008: ==
 
 * Kernel module which intercepts system calls
+
 * Testing the kernel module
+
 * Documentation
 
 
 == Tasks completed (11.11.2008) ==
 
 * Kernel module(80%)
+
 * Userspace module to communicate with the kernel module and server (10%)
+
 * Documentation
 
 == Encountered problems and changes performed ==
