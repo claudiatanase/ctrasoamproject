@@ -5,6 +5,9 @@
 #include <linux/netlink.h>
 
 #define MAX_PAYLOAD 1024  /* maximum payload size*/
+
+//structures needed to send/receive data - 
+//for now they are global, I will put them in the right place later
 struct sockaddr_nl src_addr, dest_addr;
 struct nlmsghdr *nlh = NULL;
 struct iovec iov;
