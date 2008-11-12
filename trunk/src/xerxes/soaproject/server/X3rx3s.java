@@ -6,6 +6,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Vector;
 
 import com.sun.xml.internal.messaging.saaj.util.JaxmURI.MalformedURIException;
 
@@ -22,8 +24,6 @@ public class X3rx3s implements Constants {
 	public X3rx3s(String[] args) {
 		loadedModules = new HashMap<String, Modules>();
 	}
-
-
 
 	/**
 	 * @param args
@@ -68,7 +68,7 @@ public class X3rx3s implements Constants {
 
 		}
 		// create and test connection to DB
-		 dbM = new DBManager();
+		dbM = new DBManager();
 		// load data
 		// ce-ar trebui sa load-uiasca?
 
@@ -80,24 +80,39 @@ public class X3rx3s implements Constants {
 
 	// entry point for C module
 	// TODO remind CLa to append / at the end of the fileName to mark dir files.
-	
+
 	public void addMonitoredFile(String fileName, String filePath, String tags) {
 		int fileType;
-		int fileFlag=0;
-		String [] arrayOfTags=tags.split(",");
-		if(fileName.charAt(fileName.length()-1)==File.pathSeparatorChar)
-			fileType=Constants.CDirectory;
-		else{
-			fileType=Constants.CFIle;
-			
+		int fileFlag = 0;
+		String[] arrayOfTags = tags.split(",");
+		HashSet<String> tagsForFile;
+		if (fileName.charAt(fileName.length() - 1) == File.pathSeparatorChar)
+			fileType = Constants.CDirectory;
+		else {
+			fileType = Constants.CFIle;
+
 		}
-		// TODO should I use the fileId to mark files?
-		int fileId = dbM.addMFile(fileName, filePath, fileType, fileFlag, false);
-		//TODO add test for existing tags (both in taglist and on file)
-		for(int i=0;i<arrayOfTags.length;i++){
+
+		int fileId = dbM
+				.addMFile(fileName, filePath, fileType, fileFlag, false);
+
+		tagsForFile = dbM.getTagsForFile(filePath);
+		for (int i = 0; i < arrayOfTags.length; i++) {
 			dbM.addTag(arrayOfTags[i]);
-			
+			tagsForFile.add(arrayOfTags[i]);
 		}
-		dbM.markFile(fileName, filePath, arrayOfTags);
+		arrayOfTags = (String[]) tagsForFile.toArray();
+		dbM.markFile(fileId, arrayOfTags);
+
+	}
+	
+	public String[] searchByTags(String tags){
+		String[] tagsList=tags.split(",");
+		Vector<String> results;
+		results=dbM.getFilesWithTag(tagsList[0]);
+		int i=1;
+		while(i<tagsList.length)
+			results.retainAll(dbM.getFilesWithTag(tagsList[i++]));
+		return (String[])results.toArray();
 	}
 }
