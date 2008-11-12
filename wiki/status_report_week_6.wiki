@@ -63,6 +63,8 @@ They work. The right tools for the right job.
 
  - Kernel module(80%)
 
+ - Testing the intercepting of the system calls interesting to us
+
  - Userspace module to communicate with the kernel module and server (10%)
 
  - Documentation
