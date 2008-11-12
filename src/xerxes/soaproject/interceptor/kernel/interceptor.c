@@ -46,6 +46,8 @@ long nr_syscalls = 0;
 
 //NETLINK STUFF
 //===========================================================================================
+//structures needed to send/receive data - 
+//for now they are global, I will put them in the right place later
 struct sock *nl_sk = NULL;
 u32 userspace_pid;
 struct sk_buff *skb = NULL;
@@ -227,7 +229,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid){
 
 
 
-
+//functia care imi extrage mesajul trimis de la aplicatia userspace
 void receive_from_userspace(struct sock *sk, int len)
 {
  
@@ -243,7 +245,7 @@ void receive_from_userspace(struct sock *sk, int len)
 	}
 }
 
-
+//functia care trimite mesaje catre aplicatia userspace
 void send_to_userspace(u32 pid, int syscallno, const char * path) {
 
 	char temp[4096];
@@ -262,6 +264,7 @@ void send_to_userspace(u32 pid, int syscallno, const char * path) {
 	netlink_unicast(nl_sk, skb, pid, MSG_DONTWAIT);
 }
 
+//functia de test a comunicatiei modul kernel <-> aplicatie userspace
 void netlink_test() {
  
 	//create netlink socket from kernel
