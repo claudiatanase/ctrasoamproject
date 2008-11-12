@@ -24,7 +24,7 @@ Razvan Alecsandrescu:
 
  - Database
 
- - Server (40%)
+ - Server (80%)
 
  - Modules (10%)
 
@@ -36,7 +36,7 @@ I'm on schedule. Actually a little ahead of schedule but I haven't started runni
 No significant problems encountered. Spent some time searching for the best method to load classes dynamically ( parsing modules can and will be added to the project later and this shouldn't mean that the project must be rebuilt).
 
 == Self-assessment ==
-As always yours truly shows outstanding coding skills, motivation and may I say signs of genius. Modesty is another one of my qualities.
+As always yours truly shows outstanding coding skills, motivation and may I say signs of genius. Humility is another one of my qualities.
 
 == Assessment of technologies used ==
 They work. The right tools for the right job.
