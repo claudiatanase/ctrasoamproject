@@ -1,5 +1,6 @@
 package xerxes.soaproject.modules;
 
+import org.apache.log4j.Logger;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -11,14 +12,18 @@ import org.apache.lucene.index.IndexWriter;
 
 public class LuceneModule implements Modules {
 	static final File INDEX_DIR = new File("index");
+	/**
+	 * Log4j logger
+	 */
+	static Logger log4j = Logger.getLogger("org.soarproject.xerxes");
 
 	public LuceneModule() {
-
+		log4j.debug("WTF?");
 	}
 
 	public boolean initializeModule() {
 		if (INDEX_DIR.exists()) {
-			System.out.println("Cannot save index to '" + INDEX_DIR
+			log4j.debug("Cannot save index to '" + INDEX_DIR
 					+ "' directory, please delete it first");
 			return false;
 		}
@@ -39,18 +44,18 @@ public class LuceneModule implements Modules {
 			IndexWriter writer = new IndexWriter(INDEX_DIR,
 					new StandardAnalyzer(), true,
 					IndexWriter.MaxFieldLength.LIMITED);
-			System.out.println("Indexing to directory '" + INDEX_DIR + "'...");
+			log4j.debug("Indexing to directory '" + INDEX_DIR + "'...");
 			indexDocs(writer, new File(pathName));
-			System.out.println("Optimizing...");
+			log4j.debug("Optimizing...");
 			writer.optimize();
 			writer.close();
 
 			Date end = new Date();
-			System.out.println(end.getTime() - start.getTime()
+			log4j.debug(end.getTime() - start.getTime()
 					+ " total milliseconds");
 
 		} catch (IOException e) {
-			System.out.println(" caught a " + e.getClass()
+			log4j.debug(" caught a " + e.getClass()
 					+ "\n with message: " + e.getMessage());
 			return false;
 		}
@@ -70,7 +75,7 @@ public class LuceneModule implements Modules {
 					}
 				}
 			} else {
-				System.out.println("adding " + file);
+				log4j.debug("adding " + file);
 				try {
 					writer.addDocument(FileDocument.Document(file));
 				}
