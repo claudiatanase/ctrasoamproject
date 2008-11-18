@@ -30,13 +30,12 @@ public class LuceneModule implements Modules {
 		return true;
 	}
 
-	@Override
 	public String getExtension() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-	@Override
+	
 	public boolean parseFile(String pathName) {
 		Date start = new Date();
 
