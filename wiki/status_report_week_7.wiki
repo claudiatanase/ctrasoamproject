@@ -30,3 +30,11 @@ I also stumbled on a very interesting project [http://lucene.apache.org/nutch/ N
 
 Although presently I'm a little behind schedule I'm sure that investing some time in the Lucene/Nutch combo will be beneficial in the end.
 
+== Claudia Tanase : Tasks programmed until 22.11.2008==
+User space application
+
+== Tasks completed 19.11.2008==
+User space application 50% - it will be ready until 22.11 as programmed
+
+== Problems and changes == 
+There were some changes in design: we introduced another user-space module to communicate with kernel module.
