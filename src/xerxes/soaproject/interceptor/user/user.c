@@ -1,22 +1,24 @@
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <linux/netlink.h>
+//#include <jni.h>
+#include <string.h>
 
-#define MAX_PAYLOAD 1024  /* maximum payload size*/
+#define PATH_SEPARATOR ';' /* define it to be ':' on Solaris */
+#define USER_CLASSPATH "." /* where Prog.class is */
 
-//structures needed to send/receive data - 
-//for now they are global, I will put them in the right place later
-struct sockaddr_nl src_addr, dest_addr;
-struct nlmsghdr *nlh = NULL;
-struct iovec iov;
-int sock_fd;
-struct sockaddr_nl nladdr;
-struct msghdr msg;
+#define QUIT	0
+#define ADD		1
+#define REM		2
+#define TAG		3
+#define TADD	4
+#define SEARCH  5
+#define SAVE	6
+#define UNK		7
 
-char path[1024], tag[1024];
-int cmd;
+int cmd = UNK;
+char buf[1024];
+char tag[1024];
+char path[1024];
+
 
 /*
 struct ControlDetail
@@ -67,9 +69,9 @@ int init_java()
     jmethodID midMain = NULL;
     jmethodID midCalling = NULL;
     jmethodID midDispStruct = NULL;
-        
+    
     jobject jobjDet = NULL;
-	   
+    
     //Obtaining Classes
     clsH = env->FindClass("HelloWorld");
     clsC = env->FindClass("ControlDetail");
@@ -140,57 +142,79 @@ int send_to_server(int cmd, char * path, char * tag) {
 	return 0;
 }
 
+int main(int argc, char * argv) {
 
-int main(void) {
+	printf("\n\nHELLOOOOOOO!!!!\n");
 
-	sock_fd = socket(PF_NETLINK, SOCK_RAW,NETLINK_UNUSED);
+	while(cmd != QUIT) {
+		printf("\n\n============================================\n");
+		printf("Acesta este programul de control al serverului:\n");
+		printf("Comenzi posibile:\n");
+		printf("Adauga un fisier pentru monitorizare - ADD path_to_file\n");
+		printf("Sterge un fisier de la monitorizare - REM path_to_file\n");
+		printf("Creaza un tag - TAG nume_tag\n");
+		printf("Adauga un tag unui fisier - TADD tag path_to_file\n");
+		printf("Cauta un fisier - SEARCH args\n");
+		printf("Salveaza ultima cautare - SAVE\n");
+		printf("Terminare program - QUIT\n");
+		printf("\nVa rugam in troduceti comanda:\n");
 
-	memset(&src_addr, 0, sizeof(src_addr));
-	src_addr.nl_family = AF_NETLINK;
-	src_addr.nl_pid = getpid();  /* self pid */
-	src_addr.nl_groups = 0;  /* not in mcast groups */
+		scanf("%s", buf);
 
-	bind(sock_fd, (struct sockaddr*)&src_addr, sizeof(src_addr));
+		printf("Ati ales %s\n", buf);
 
-	memset(&dest_addr, 0, sizeof(dest_addr));
-	dest_addr.nl_family = AF_NETLINK;
-	dest_addr.nl_pid = 0;   /* For Linux Kernel */
-	dest_addr.nl_groups = 0; /* unicast */
+		cmd = QUIT;
 
-	nlh=(struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+		if (strcmp(buf,"ADD") == 0) {
+			printf("Introduceti calea catre fisier:\n");
+			scanf("%s", path);
+			printf("Ati ales %s\n", path);
+			cmd = ADD;
+			//send cmd to server
+			send_to_server(ADD, path, NULL);
+		}
+		if (strcmp(buf,"REM") == 0) {
+			printf("Introduceti calea catre fisier:\n");
+			scanf("%s", path);
+			printf("Ati ales %s\n", path);
+			cmd = REM;
+			//send cmd to server
+			send_to_server(REM, path, NULL);
+		}
+		if (strcmp(buf,"TAG") == 0) {
+			printf("Introduceti numele tagului:\n");
+			scanf("%s", tag);
+			printf("Ati ales %s\n", tag);
+			cmd = TAG;
+			//send cmd to server
+			send_to_server(TAG, NULL, tag);
+		}
+		if (strcmp(buf,"TADD") == 0) {
+			printf("Introduceti numele tagului:\n");
+			scanf("%s", tag);
+			printf("Introduceti calea catre fisier:\n");
+			scanf("%s", path);
+			printf("Ati ales %s %s\n", tag, path);
+			cmd = TADD;
+			//send cmd to server
+			send_to_server(TADD, path, tag);
+		}
+		if (strcmp(buf,"SEARCH") == 0) {
+			cmd = SEARCH;
+			//send cmd to server
+			send_to_server(ADD, path, tag);
+		}
+		if (strcmp(buf,"SAVE") == 0) {
+			cmd = SAVE;
+			//send cmd to server
+			send_to_server(ADD, NULL, NULL);
+		}
+		if (strcmp(buf,"QUIT") == 0) {
+			cmd = QUIT;
+		}
 
-	/* Fill the netlink message header */
-	nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-	nlh->nlmsg_pid = getpid();  /* self pid */
-	nlh->nlmsg_flags = 0;
-
-	/* Fill in the netlink message payload */
-	strcpy(NLMSG_DATA(nlh), "Hello you! This is Userspace App");
-
-	iov.iov_base = (void *)nlh;
-	iov.iov_len = nlh->nlmsg_len;
-	msg.msg_name = (void *)&dest_addr;
-	msg.msg_namelen = sizeof(dest_addr);
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-
-	sendmsg(sock_fd, &msg, 0);
-
-
-	/* Read message from kernel */
-	while (1) {
-		memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
-		recvmsg(sock_fd, &msg, 0);
-		printf(" Received message payload: %s\n", NLMSG_DATA(nlh));
-
-		send_to_server(cmd, path, tag);
-
-		//break command
-		//if (cmd == QUIT) 
-		//	break;
-	}
-	/* Close Netlink Socket */
-	close(sock_fd);
-
+		
+	}	
 	return 0;
 }
+
