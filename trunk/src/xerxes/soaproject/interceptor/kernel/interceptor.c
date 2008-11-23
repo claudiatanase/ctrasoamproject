@@ -80,7 +80,7 @@ asmlinkage long my_sys_mkdir(const char __user *pathname, int mode) {
 asmlinkage long my_sys_open(const char __user *filename, int flags, int mode) {
 
 		//send interesting data to server
-		send_to_userspace(pid, __NR_open, filename);
+		//send_to_userspace(pid, __NR_open, filename);
 		nr_syscalls++;
 
 		//call old syscall
@@ -92,7 +92,7 @@ asmlinkage long my_sys_open(const char __user *filename, int flags, int mode) {
 asmlinkage long my_sys_creat(const char __user * pathname, int mode) {
 
 	//send interesting data to server
-	send_to_userspace(pid, __NR_creat, pathname);
+	//send_to_userspace(pid, __NR_creat, pathname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -114,7 +114,7 @@ asmlinkage ssize_t my_sys_write(unsigned int fd, const char __user * buf, size_t
 asmlinkage long my_sys_link(const char __user *oldname, const char __user *newname) {
 
 	//send interesting data to server	
-	send_to_userspace(pid, __NR_link, newname);
+	//send_to_userspace(pid, __NR_link, newname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -125,7 +125,7 @@ asmlinkage long my_sys_link(const char __user *oldname, const char __user *newna
 asmlinkage long my_sys_unlink(const char __user *pathname) {
 
 	//send interesting data to server		
-	send_to_userspace(pid, __NR_unlink, pathname);
+	//send_to_userspace(pid, __NR_unlink, pathname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -137,7 +137,7 @@ asmlinkage long my_sys_unlink(const char __user *pathname) {
 asmlinkage long my_sys_mknod(const char __user *filename, int mode, unsigned dev) {
 
 	//send interesting data to server		
-	send_to_userspace(pid, __NR_mknod, filename);
+	//send_to_userspace(pid, __NR_mknod, filename);
 	nr_syscalls++;
 
 	//call old syscall
@@ -148,7 +148,7 @@ asmlinkage long my_sys_mknod(const char __user *filename, int mode, unsigned dev
 asmlinkage long my_sys_rmdir(const char __user *pathname) {
 	
 	//send interesting data to server		
-	send_to_userspace(pid, __NR_rmdir, pathname);
+	//send_to_userspace(pid, __NR_rmdir, pathname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -159,7 +159,7 @@ asmlinkage long my_sys_rmdir(const char __user *pathname) {
 asmlinkage long my_sys_rename(const char __user *oldname, const char __user *newname) {
 
 	//send interesting data to server		
-	send_to_userspace(pid, __NR_rename, newname);
+	//send_to_userspace(pid, __NR_rename, newname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -322,41 +322,43 @@ static int my_module_init(void) {
 	}      
 
 	//inlocuiesc in tabela de apeluri de sistem apelul 0 cu my_syscall
-	old_sys_calls[MY_SYSCALL_NO] = sys_call_table[MY_SYSCALL_NO];
-    sys_call_table[MY_SYSCALL_NO] = my_syscall;
+	//old_sys_calls[MY_SYSCALL_NO] = sys_call_table[MY_SYSCALL_NO];
+    //sys_call_table[MY_SYSCALL_NO] = my_syscall;
 
 	//inlocuiesc apelul de sistem initial cu apelul meu de interceptare	
-	/*
 	old_sys_open = sys_call_table[__NR_open];
-	sys_call_table[__NR_open] = my_sys_open;
+	sys_call_table[__NR_open] = my_sys_open;	
+	/*
 	old_sys_write = sys_call_table[__NR_write];
 	sys_call_table[__NR_write] = my_sys_write;
+	*/
 	old_sys_creat = sys_call_table[__NR_creat];
-	sys_call_table[__NR_creat] = my_sys_creat;
+	sys_call_table[__NR_creat] = my_sys_creat;	
 	old_sys_link = sys_call_table[__NR_link];
-	sys_call_table[__NR_link] = my_sys_link;
+	sys_call_table[__NR_link] = my_sys_link;	
 	old_sys_unlink = sys_call_table[__NR_unlink];
-	sys_call_table[__NR_unlink] = my_sys_unlink;
+	sys_call_table[__NR_unlink] = my_sys_unlink;	
 	old_sys_mknod = sys_call_table[__NR_mknod];
 	sys_call_table[__NR_mknod] = my_sys_mknod;
-	//old_sys_chown = sys_call_table[__NR_chown];
+	old_sys_chown = sys_call_table[__NR_chown];	
 	sys_call_table[__NR_chown] = interceptor;
 	old_sys_rename = sys_call_table[__NR_rename];
 	sys_call_table[__NR_rename] = my_sys_rename;
+	/*
 	old_sys_mkdir = sys_call_table[__NR_mkdir];
 	sys_call_table[__NR_mkdir] = my_sys_mkdir;
 	old_sys_rmdir = sys_call_table[__NR_rmdir];
 	sys_call_table[__NR_rmdir] = my_sys_rmdir;
 	*/
 	
-	sys_call_table[__NR_open] = interceptor;	
+	//sys_call_table[__NR_open] = interceptor;	
 	sys_call_table[__NR_write] = interceptor;	
-	sys_call_table[__NR_creat] = interceptor;
-	sys_call_table[__NR_link] = interceptor;
-	sys_call_table[__NR_unlink] = interceptor;
-	sys_call_table[__NR_mknod] = interceptor;
-	sys_call_table[__NR_chown] = interceptor;
-	sys_call_table[__NR_rename] = interceptor;
+	//sys_call_table[__NR_creat] = interceptor;
+	//sys_call_table[__NR_link] = interceptor;
+	//sys_call_table[__NR_unlink] = interceptor;
+	//sys_call_table[__NR_mknod] = interceptor;
+	//sys_call_table[__NR_chown] = interceptor;
+	//sys_call_table[__NR_rename] = interceptor;
 	sys_call_table[__NR_mkdir] = interceptor;
 	sys_call_table[__NR_rmdir] = interceptor;
     
