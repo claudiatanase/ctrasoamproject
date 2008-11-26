@@ -72,7 +72,7 @@ public class SearchFiles {
     }
 
     String index = "index";
-    String field = "contents";
+    String field = "title";
     String queries = null;
     int repeat = 0;
     boolean raw = false;
