@@ -24,12 +24,18 @@ Razvan Alecsandrescu:
 
 == Claudia Tanase : Tasks programmed until 2.12.2008==
 User-space Application
+
 Kernel-module <-> User-space application integration
 
 == Tasks completed 26.11.2008==
 User-space Application  -> 80 % complete
+
 Kernel-module <-> User-space application integration   -> 70% complete 
+
 Server <-> User-space application integration   -> 70 % complete
 
+
 == Problems and changes == 
-...
+The two main problems now are:
+- meeting with Razvan to figure out all the details regarding how to put everything together 
+- debugging netlink socket code used to communicate asynchronously between kernel module and user-space module
