@@ -1,0 +1,35 @@
+#summary Status report week 8
+
+= Introduction =
+
+Status report for week 8
+
+
+= Details =
+
+Razvan Alecsandrescu:
+
+== Tasks programmed until 26.11.2008==
+...
+== Tasks completed 26.11.2008==
+...
+
+== Problems and changes == 
+
+...
+
+== Self Assessment ==
+
+...
+
+== Claudia Tanase : Tasks programmed until 2.12.2008==
+User-space Application
+Kernel-module <-> User-space application integration
+
+== Tasks completed 26.11.2008==
+User-space Application  -> 80 % complete
+Kernel-module <-> User-space application integration   -> 70% complete 
+Server <-> User-space application integration   -> 70 % complete
+
+== Problems and changes == 
+...
