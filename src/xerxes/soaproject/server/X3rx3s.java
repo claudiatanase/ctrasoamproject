@@ -9,11 +9,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Vector;
 
-import com.sun.xml.internal.messaging.saaj.util.JaxmURI.MalformedURIException;
 
-import xerxes.soaproject.Constants;
+
 import xerxes.soaproject.db.DBManager;
-import xerxes.soaproject.modules.Modules;
+import xerxes.soaproject.interfaces.Constants;
+import xerxes.soaproject.interfaces.Modules;
 
 public class X3rx3s implements Constants {
 
