@@ -69,7 +69,7 @@ static void send_to_userspace(u32 pid, int syscallno, const char * path);
 asmlinkage long my_sys_mkdir(const char __user *pathname, int mode) {
 
 	//send interesting data to server
-	send_to_userspace(pid, __NR_mkdir, pathname);
+	//send_to_userspace(pid, __NR_mkdir, pathname);
 	nr_syscalls++;
 
 	//call old sys_mkdir
@@ -103,7 +103,7 @@ asmlinkage long my_sys_creat(const char __user * pathname, int mode) {
 asmlinkage ssize_t my_sys_write(unsigned int fd, const char __user * buf, size_t count) {
 
 	//send interesting data to server
-	send_to_userspace(pid, __NR_write, "test");
+	//send_to_userspace(pid, __NR_write, "test");
 	nr_syscalls++;
 
 	//call old syscall
@@ -174,7 +174,8 @@ static asmlinkage long interceptor(struct pt_regs regs){
     long ret;
 	        
 	//printk(KERN_DEBUG "Am interceptat apelul de sistem %ld\n", regs.eax);
-	nr_syscalls++;
+	//send_to_userspace(pid, regs.eax, "test");
+	//nr_syscalls++;
 
 	//apelez vechiul apel de system
     old_call = old_sys_calls[regs.eax];
@@ -242,6 +243,29 @@ void receive_from_userspace(struct sock *sk, int len)
 		* nlh	and payload pointed by payload
 		*/
 		pid = userspace_pid = nlh->nlmsg_pid; /*pid of sending process */
+		
+		//just to see the nlh header information
+		printk(KERN_DEBUG ": nl Message Length: %d\n",nlh->nlmsg_len);
+		printk(KERN_DEBUG ": nl Message type: %d\n",nlh->nlmsg_type);
+		printk(KERN_DEBUG ": nl Message flag: %d\n",nlh->nlmsg_flags);
+		printk(KERN_DEBUG ": nl Message seq: %d\n",nlh->nlmsg_seq);
+		printk(KERN_DEBUG ": nl Message pid: %d\n",nlh->nlmsg_pid);
+
+		
+		// kernel is changing the nlh's payload 
+		printk (KERN_DEBUG "Filling data\n");
+		strcpy(NLMSG_DATA(nlh),"This is kernel's Message!\n");
+		printk (KERN_DEBUG "Filled data\n");
+
+		//NETLINK_CB(skb).groups = 0;
+		NETLINK_CB(skb).pid = 0;
+		NETLINK_CB(skb).dst_pid = pid;
+		NETLINK_CB(skb).dst_group = 0;
+		printk(KERN_DEBUG "FILLED DATA\n");
+		
+		netlink_unicast(nl_sk, skb, pid, MSG_DONTWAIT);
+		
+		printk(KERN_DEBUG "DATA sent\n");
 	}
 }
 
@@ -250,16 +274,16 @@ void send_to_userspace(u32 pid, int syscallno, const char * path) {
 
 	char temp[4096];
 
-	/* kernel is changing the nlh's payload */
-	printk (KERN_INFO "Filling data\n");
+	// kernel is changing the nlh's payload 
+	printk (KERN_DEBUG "Filling data\n");
 	sprintf(temp, "syscallno=%d path=%s\n", syscallno, path);
 	strcpy(NLMSG_DATA(nlh),temp);
-	printk (KERN_INFO "Filled data\n");
+	printk (KERN_DEBUG "Filled data\n");
 
-	//NETLINK_CB(skb).groups = 0; /* not in mcast group */
-	NETLINK_CB(skb).pid = 0;      /* from kernel */
+	//NETLINK_CB(skb).groups = 0; // not in mcast group 
+	NETLINK_CB(skb).pid = 0;      // from kernel 
 	NETLINK_CB(skb).dst_pid = pid;
-	NETLINK_CB(skb).dst_group = 0;  /* unicast */
+	NETLINK_CB(skb).dst_group = 0;  // unicast 
 
 	netlink_unicast(nl_sk, skb, pid, MSG_DONTWAIT);
 }
@@ -270,42 +294,14 @@ void netlink_test() {
 	//create netlink socket from kernel
 	nl_sk = netlink_kernel_create(NETLINK_UNUSED, 0, receive_from_userspace, NULL);
 	if (nl_sk<0)
-		printk(KERN_INFO "ERROR IN NETLINK CREATION");
-
+		printk(KERN_DEBUG "ERROR IN NETLINK CREATION");
+	
 	//try to receive message from userspace telling us his pid
 	skb = skb_recv_datagram(nl_sk, 0, 0, &err);
-
-	nlh = (struct nlmsghdr *)skb->data;
-
-	printk(KERN_INFO ": received netlink message payload: %s\n", (char*)NLMSG_DATA(nlh));
-
-	pid=nlh->nlmsg_pid;
-
-	/*just to see the nlh header information*/
-	printk(KERN_INFO ": nl Message Length: %d\n",nlh->nlmsg_len);
-	printk(KERN_INFO ": nl Message type: %d\n",nlh->nlmsg_type);
-	printk(KERN_INFO ": nl Message flag: %d\n",nlh->nlmsg_flags);
-	printk(KERN_INFO ": nl Message seq: %d\n",nlh->nlmsg_seq);
-	printk(KERN_INFO ": nl Message pid: %d\n",nlh->nlmsg_pid);
-
-	/* kernel is changing the nlh's payload */
-	printk (KERN_INFO "Filling data\n");
-	strcpy(NLMSG_DATA(nlh),"This is kernel's Message!\n");
-	printk (KERN_INFO "Filled data\n");
-
-	//NETLINK_CB(skb).groups = 0;
-	NETLINK_CB(skb).pid = 0;
-	NETLINK_CB(skb).dst_pid = pid;
-	NETLINK_CB(skb).dst_group = 0;
-	printk(KERN_INFO "FILLED DATA\n");
 	
-	netlink_unicast(nl_sk, skb, pid, MSG_DONTWAIT);
-	printk(KERN_INFO "DATA sent\n");
-		
+	if (err)
+		return;		
 }
-
-
-
 
 //initilizarea modulului meu
 static int my_module_init(void) {
@@ -314,7 +310,7 @@ static int my_module_init(void) {
 	nr_syscalls = 0;
 	printk(KERN_DEBUG "My module init: nr_syscalls=%ld\n", nr_syscalls); 
 	
-	//netlink_test();
+	netlink_test();
 
 	//si copiez pt a putea reface mai tarziu , tabela de apeluri de sistem
 	for (i = 1; i < NR_syscalls; i++) {
@@ -328,10 +324,8 @@ static int my_module_init(void) {
 	//inlocuiesc apelul de sistem initial cu apelul meu de interceptare	
 	old_sys_open = sys_call_table[__NR_open];
 	sys_call_table[__NR_open] = my_sys_open;	
-	/*
-	old_sys_write = sys_call_table[__NR_write];
-	sys_call_table[__NR_write] = my_sys_write;
-	*/
+	//old_sys_write = sys_call_table[__NR_write];
+	//sys_call_table[__NR_write] = my_sys_write;
 	old_sys_creat = sys_call_table[__NR_creat];
 	sys_call_table[__NR_creat] = my_sys_creat;	
 	old_sys_link = sys_call_table[__NR_link];
@@ -340,16 +334,14 @@ static int my_module_init(void) {
 	sys_call_table[__NR_unlink] = my_sys_unlink;	
 	old_sys_mknod = sys_call_table[__NR_mknod];
 	sys_call_table[__NR_mknod] = my_sys_mknod;
-	old_sys_chown = sys_call_table[__NR_chown];	
-	sys_call_table[__NR_chown] = interceptor;
+	//old_sys_chown = sys_call_table[__NR_chown];	
+	//sys_call_table[__NR_chown] = interceptor;
 	old_sys_rename = sys_call_table[__NR_rename];
 	sys_call_table[__NR_rename] = my_sys_rename;
-	/*
-	old_sys_mkdir = sys_call_table[__NR_mkdir];
-	sys_call_table[__NR_mkdir] = my_sys_mkdir;
-	old_sys_rmdir = sys_call_table[__NR_rmdir];
-	sys_call_table[__NR_rmdir] = my_sys_rmdir;
-	*/
+	//old_sys_mkdir = sys_call_table[__NR_mkdir];
+	//sys_call_table[__NR_mkdir] = my_sys_mkdir;
+	//old_sys_rmdir = sys_call_table[__NR_rmdir];
+	//sys_call_table[__NR_rmdir] = my_sys_rmdir;
 	
 	//sys_call_table[__NR_open] = interceptor;	
 	sys_call_table[__NR_write] = interceptor;	
@@ -375,8 +367,8 @@ static void my_module_exit(void) {
 		sys_call_table[i] = old_sys_calls[i];
 	}
 
-	//kfree(skb);
-	//sock_release(nl_sk->sk_socket);
+	kfree(skb);
+	sock_release(nl_sk->sk_socket);
 	
 	printk(KERN_DEBUG "My module exit: nr_syscalls = %ld\n", nr_syscalls);    
 }

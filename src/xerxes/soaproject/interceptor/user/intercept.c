@@ -154,17 +154,17 @@ int main(void) {
 
 	memset(&dest_addr, 0, sizeof(dest_addr));
 	dest_addr.nl_family = AF_NETLINK;
-	dest_addr.nl_pid = 0;   /* For Linux Kernel */
-	dest_addr.nl_groups = 0; /* unicast */
+	dest_addr.nl_pid = 0;   // For Linux Kernel /
+	dest_addr.nl_groups = 0; // unicast 
 
 	nlh=(struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
 
-	/* Fill the netlink message header */
+	// Fill the netlink message header 
 	nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-	nlh->nlmsg_pid = getpid();  /* self pid */
+	nlh->nlmsg_pid = getpid();  // self pid 
 	nlh->nlmsg_flags = 0;
 
-	/* Fill in the netlink message payload */
+	// Fill in the netlink message payload
 	strcpy(NLMSG_DATA(nlh), "Hello you! This is Userspace App");
 
 	iov.iov_base = (void *)nlh;
@@ -176,8 +176,8 @@ int main(void) {
 
 	sendmsg(sock_fd, &msg, 0);
 
-
-	/* Read message from kernel */
+	
+	// Read message from kernel 
 	while (1) {
 		memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
 		recvmsg(sock_fd, &msg, 0);
@@ -187,9 +187,10 @@ int main(void) {
 
 		//break command
 		//if (cmd == QUIT) 
-		//	break;
+		//break;
 	}
-	/* Close Netlink Socket */
+	
+	// Close Netlink Socket 
 	close(sock_fd);
 
 	return 0;
