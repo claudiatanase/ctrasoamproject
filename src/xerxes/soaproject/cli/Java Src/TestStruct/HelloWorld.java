@@ -25,9 +25,9 @@ public class HelloWorld
 	public static int DisplayStruct2(ControlDetail2 ctrlDetail)
       {
       	System.out.println("Structure is:\n-------------------------");
-      	System.out.println("Path:" + ctrlDetail.path);
-      	System.out.println("Tag:" + ctrlDetail.tag);
-      	System.out.println("Cmd" + ctrlDetail.cmd);
+      	System.out.println("Path: " + ctrlDetail.path);
+      	System.out.println("Tag: " + ctrlDetail.tag);
+      	System.out.println("Cmd: " + ctrlDetail.cmd);
       	return 1;     	
       }
 
