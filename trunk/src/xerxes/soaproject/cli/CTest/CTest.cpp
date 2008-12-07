@@ -58,7 +58,7 @@ JNIEnv* create_vm(JavaVM ** jvm) {
     JavaVMOption options;
     //options.optionString = "-Djava.class.path=E:\\java\\Java Src\\TestStruct"; //Path to the java source code
 	//options.optionString = "-Djava.class.path=E:\\MyFolder\\AC\\Anul 6 MasterSPBA_1\\SOA(Sisteme de Operare Avansate)\\Proiect\\surse\\ctrasoamproject\\src\\xerxes\\soaproject\\cli\\Java Src\\TestStruct"; //Path to the java source code
-    options.optionString = "-Djava.class.path=xerxes.jar"; //Path to the java source code
+    options.optionString = "-Djava.class.path=E:\\MyFolder\\AC\\Anul 6 MasterSPBA_1\\SOA(Sisteme de Operare Avansate)\\Proiect\\surse\\ctrasoamproject\\src\\xerxes\\soaproject\\cli\\CTest\\Debug\\xerxes.jar"; //Path to the java source code
 	vm_args.version = JNI_VERSION_1_6; //JDK version. This indicates version 1.6
     vm_args.nOptions = 1;
     vm_args.options = &options;
@@ -91,15 +91,15 @@ int send_to_server(int cmd, char * path, char * tag) {
     jobject jobjDet = NULL;
     
     //Obtaining Classes
-    clsH = env->FindClass("HelloWorld");
-    clsC = env->FindClass("ControlDetail2");
+    clsH = env->FindClass("xerxes/soaproject/bridge/HelloWorld");
+    clsC = env->FindClass("xerxes/soaproject/bridge/ControlDetail2");
 
 	
 	//Obtaining Method IDs
     if (clsH != NULL)
     {
 		midMain       = env->GetStaticMethodID(clsH, "main", "([Ljava/lang/String;)V");
-		midDispStruct = env->GetStaticMethodID(clsH,"DisplayStruct2","(LControlDetail2;)I");
+		midDispStruct = env->GetStaticMethodID(clsH,"DisplayStruct2","(Lxerxes/soaproject/bridge/ControlDetail2;)I");
 		
 	}
 	else
