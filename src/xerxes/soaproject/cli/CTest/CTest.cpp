@@ -143,13 +143,28 @@ int send_to_server(int cmd, char * path, char * tag) {
 }
 
 
+int test_file_path(char * path) {
+
+	FILE * f;
+
+	f = fopen(path, "r");
+
+	if (f == NULL) {
+		return 0;
+	} else {	
+		fclose(f);
+		return 1;
+	}
+}
+
 int main(int argc, char* argv[])
 {
 
 	env = create_vm(&jvm);
 	if (env == NULL)
 		return 1;
-		
+	
+	/*
 	struct ControlDetail ctrlDetail;	
 	ctrlDetail.ID = 11;
 	strcpy(ctrlDetail.Name,"HR-HW");
@@ -158,7 +173,7 @@ int main(int argc, char* argv[])
 	
 	printf("Struct Created in C has values:\nID:%d\nName:%s\n IP:%s\nPort:%d\n",ctrlDetail.ID,ctrlDetail.Name,ctrlDetail.IP,ctrlDetail.Port);
 
-	/********************************************************/
+	
 	struct WorkOrder WO[2];
 	strcpy(WO[0].sumSerialId,"2000");
 	strcpy(WO[0].accessNumber,"2878430");
@@ -230,9 +245,7 @@ int main(int argc, char* argv[])
     	printf("\nUnable to find the requested class\n");    	
     }
 
-	/************************************************************************/
-	/* Now we will call the functions using the their method IDs			*/
-	/************************************************************************/
+	
 	if(midMain != NULL)
 		env->CallStaticVoidMethod(clsH, midMain, NULL); //Calling the main method.
 	
@@ -301,6 +314,7 @@ int main(int argc, char* argv[])
 		env->ReleaseStringUTFChars(jstrLog,pLog);
 	}
 
+	*/
 
 	while(cmd != QUIT) {
 		printf("\n\n============================================\n");
@@ -326,16 +340,24 @@ int main(int argc, char* argv[])
 			scanf("%s", path);
 			printf("Ati ales %s\n", path);
 			cmd = ADD;
-			//send cmd to server
-			send_to_server(ADD, path, tag);
+			if (test_file_path(path)) {
+				//send cmd to server
+				send_to_server(ADD, path, tag);
+			} else {
+				printf("Fisier inexistent!!!\n");
+			}
 		}
 		if (strcmp(buf,"REM") == 0) {
 			printf("Introduceti calea catre fisier:\n");
 			scanf("%s", path);
 			printf("Ati ales %s\n", path);
 			cmd = REM;
-			//send cmd to server
-			send_to_server(REM, path, NULL);
+			if (test_file_path(path)) {
+				//send cmd to server
+				send_to_server(REM, path, tag);
+			} else {
+				printf("Fisier inexistent!!!\n");
+			}
 		}
 		if (strcmp(buf,"TAG") == 0) {
 			printf("Introduceti numele tagului:\n");
@@ -343,7 +365,7 @@ int main(int argc, char* argv[])
 			printf("Ati ales %s\n", tag);
 			cmd = TAG;
 			//send cmd to server
-			send_to_server(TAG, NULL, tag);
+			send_to_server(TAG, path, tag);
 		}
 		if (strcmp(buf,"TADD") == 0) {
 			printf("Introduceti numele tagului:\n");
@@ -352,8 +374,12 @@ int main(int argc, char* argv[])
 			scanf("%s", path);
 			printf("Ati ales %s %s\n", tag, path);
 			cmd = TADD;
-			//send cmd to server
-			send_to_server(TADD, path, tag);
+			if (test_file_path(path)) {
+				//send cmd to server
+				send_to_server(TADD, path, tag);
+			} else {
+				printf("Fisier inexistent!!!\n");
+			}
 		}
 		if (strcmp(buf,"SEARCH") == 0) {
 			cmd = SEARCH;
@@ -363,7 +389,7 @@ int main(int argc, char* argv[])
 		if (strcmp(buf,"SAVE") == 0) {
 			cmd = SAVE;
 			//send cmd to server
-			send_to_server(ADD, NULL, NULL);
+			send_to_server(SAVE, path, tag);
 		}
 		if (strcmp(buf,"QUIT") == 0) {
 			cmd = QUIT;
