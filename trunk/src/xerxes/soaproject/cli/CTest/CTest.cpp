@@ -57,8 +57,9 @@ JNIEnv* create_vm(JavaVM ** jvm) {
     JavaVMInitArgs vm_args;
     JavaVMOption options;
     //options.optionString = "-Djava.class.path=E:\\java\\Java Src\\TestStruct"; //Path to the java source code
-	options.optionString = "-Djava.class.path=E:\\MyFolder\\AC\\Anul 6 MasterSPBA_1\\SOA(Sisteme de Operare Avansate)\\Proiect\\surse\\ctrasoamproject\\src\\xerxes\\soaproject\\cli\\Java Src\\TestStruct"; //Path to the java source code
-    vm_args.version = JNI_VERSION_1_6; //JDK version. This indicates version 1.6
+	//options.optionString = "-Djava.class.path=E:\\MyFolder\\AC\\Anul 6 MasterSPBA_1\\SOA(Sisteme de Operare Avansate)\\Proiect\\surse\\ctrasoamproject\\src\\xerxes\\soaproject\\cli\\Java Src\\TestStruct"; //Path to the java source code
+    options.optionString = "-Djava.class.path=xerxes.jar"; //Path to the java source code
+	vm_args.version = JNI_VERSION_1_6; //JDK version. This indicates version 1.6
     vm_args.nOptions = 1;
     vm_args.options = &options;
     vm_args.ignoreUnrecognized = 0;
