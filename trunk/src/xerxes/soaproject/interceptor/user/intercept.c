@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
+#include <jni.h>
 
-#define MAX_PAYLOAD 1024  /* maximum payload size*/
+#define MAX_PAYLOAD 1024  
+#define STRING_LENGTH 1024
 
 //structures needed to send/receive data - 
 //for now they are global, I will put them in the right place later
@@ -15,15 +17,19 @@ int sock_fd;
 struct sockaddr_nl nladdr;
 struct msghdr msg;
 
-char path[1024], tag[1024];
 int cmd;
+char buf[STRING_LENGTH];
+char tag[STRING_LENGTH];
+char path[STRING_LENGTH];
 
-/*
-struct ControlDetail
+JNIEnv *env;
+JavaVM * jvm;
+
+struct ControlDetail2
 {
 	int ID;
-	char path[100];
-	char tag[100];
+	char path[STRING_LENGTH];
+	char tag[STRING_LENGTH];
 	int cmd;
 };
 
@@ -33,7 +39,8 @@ JNIEnv* create_vm(JavaVM ** jvm) {
     JNIEnv *env;
     JavaVMInitArgs vm_args;
     JavaVMOption options;
-    options.optionString = "-Djava.class.path=/soaproject"; //Path to the java source code
+    
+    options.optionString = "-Djava.class.path=./xerxes.jar"; //Path to the java source code
     vm_args.version = JNI_VERSION_1_6; //JDK version. This indicates version 1.6
     vm_args.nOptions = 1;
     vm_args.options = &options;
@@ -42,60 +49,55 @@ JNIEnv* create_vm(JavaVM ** jvm) {
     int ret = JNI_CreateJavaVM(jvm, (void**)&env, &vm_args);
     if(ret < 0)
     	printf("\nUnable to Launch JVM\n");   	
-	return env;
+
+    return env;
 }
 
-int init_java()
-{
-	JNIEnv *env;
-	JavaVM * jvm;
-	env = create_vm(&jvm);
-	if (env == NULL)
-		return 1;
-		
-	struct ControlDetail ctrlDetail;	
+/*
+int send_to_server(int cmd, char * path, char * tag) {
+
+	struct ControlDetail2 ctrlDetail;	
 	ctrlDetail.ID = 1;
-	strcpy(ctrlDetail.tag,"BARCELONA");
-	strcpy(ctrlDetail.path,"/soaproject");
-	ctrlDetail.cmd = UNK;
+	strcpy(ctrlDetail.tag, tag);
+	strcpy(ctrlDetail.path, path);
+	ctrlDetail.cmd = cmd;
 	
 	printf("Struct Created in C has values:\nID:%d\nTag:%s\n path:%s\ncmd:%d\n",ctrlDetail.ID,ctrlDetail.tag,ctrlDetail.path,ctrlDetail.cmd);
 	
-    jclass clsH=NULL;
-    jclass clsC = NULL;   
-	jclass clsR = NULL;
-    jmethodID midMain = NULL;
-    jmethodID midCalling = NULL;
-    jmethodID midDispStruct = NULL;
-        
-    jobject jobjDet = NULL;
-	   
-    //Obtaining Classes
-    clsH = env->FindClass("HelloWorld");
-    clsC = env->FindClass("ControlDetail");
-
+	jclass clsH=NULL;
+	jclass clsC = NULL;   
 	
+	jmethodID midMain = NULL;
+	jmethodID midDispStruct = NULL;
+	jmethodID midCtrlDetConst = NULL;
+    
+	jobject jobjDet = NULL;
+
+	//Obtaining Classes
+	clsH = env->FindClass("xerxes/soaproject/bridge/HelloWorld");
+	clsC = env->FindClass("xerxes/soaproject/bridge/ControlDetail2");
+
+
 	//Obtaining Method IDs
-    if (clsH != NULL)
-    {
+	if (clsH != NULL)
+	{
 		midMain       = env->GetStaticMethodID(clsH, "main", "([Ljava/lang/String;)V");
-		midCalling    = env->GetStaticMethodID(clsH,"TestCall","(Ljava/lang/String;)V");
-		midDispStruct = env->GetStaticMethodID(clsH,"DisplayStruct","(LControlDetail;)I");
-		
+		midDispStruct = env->GetStaticMethodID(clsH,"DisplayStruct2","(Lxerxes/soaproject/bridge/ControlDetail2;)I");
+	
 	}
 	else
-    {
-    	printf("\nUnable to find the requested class\n");    	
-    }
+	{
+		printf("\nUnable to find the requested class\n");    	
+	}
 	if(clsC != NULL)
 	{
 		//Get constructor ID for ControlDetail
 		midCtrlDetConst = env->GetMethodID(clsC, "<init>", "(ILjava/lang/String;Ljava/lang/String;I)V");		
 	}
 	else
-    {
-    	printf("\nUnable to find the requested class\n");    	
-    }	
+	{
+		printf("\nUnable to find the requested class\n");    	
+	}	
 
 	
 	// Now we will call the functions using the their method IDs		
@@ -103,34 +105,42 @@ int init_java()
 	if(midMain != NULL)
 		env->CallStaticVoidMethod(clsH, midMain, NULL); //Calling the main method.
 	
-	if (midCalling!=NULL)
-	{
-		jstring StringArg = env->NewStringUTF("\nTestCall:Called from the C Program\n");
-		//Calling another static method and passing string type parameter
-		env->CallStaticVoidMethod(clsH,midCalling,StringArg);
-	}
 	
 	printf("\nGoing to Call DisplayStruct\n");
 	if (midDispStruct!=NULL)
 	{
 		if(clsC != NULL && midCtrlDetConst != NULL)
 		{
-			jstring StringArgTag = env->NewStringUTF(ctrlDetail.Tag);
-			jstring StringArgPath = env->NewStringUTF(ctrlDetail.Path);
+			jstring StringArgTag = env->NewStringUTF(ctrlDetail.tag);
+			jstring StringArgPath = env->NewStringUTF(ctrlDetail.path);
 			
 			//Creating the Object of ControlDetail.
-			jobjDet = env->NewObject(clsC, midCtrlDetConst, (jint)ctrlDetail.ID, StringArgTag, StringArgPath, (jint)ctrlDetail.Cmd);
+			jobjDet = env->NewObject(clsC, midCtrlDetConst, (jint)ctrlDetail.ID, StringArgTag, StringArgPath, (jint)ctrlDetail.cmd);
 		}
 		
 		if(jobjDet != NULL && midDispStruct != NULL)
 			env->CallStaticIntMethod(clsH,midDispStruct,jobjDet); //Calling the method and passing ControlDetail Object as parameter
 	}
-	
-	//Release resources.
-	int n = jvm->DestroyJavaVM();
-    return 0;
+
+
+	return 0;
 }
-*/  
+
+
+int test_file_path(char * path) {
+
+	FILE * f;
+
+	f = fopen(path, "r");
+
+	if (f == NULL) {
+		return 0;
+	} else {	
+		fclose(f);
+		return 1;
+	}
+}
+*/
 
 
 int send_to_server(int cmd, char * path, char * tag) {
@@ -142,6 +152,10 @@ int send_to_server(int cmd, char * path, char * tag) {
 
 
 int main(void) {
+
+	env = create_vm(&jvm);
+	if (env == NULL)
+		return 1;
 
 	sock_fd = socket(PF_NETLINK, SOCK_RAW,NETLINK_UNUSED);
 
@@ -192,6 +206,9 @@ int main(void) {
 	
 	// Close Netlink Socket 
 	close(sock_fd);
+	
+	//Release resources.
+	//int n = jvm->DestroyJavaVM();
 
 	return 0;
 }
