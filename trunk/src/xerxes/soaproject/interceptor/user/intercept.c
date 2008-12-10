@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
-#include <jni.h>
+//#include <jni.h>
 
 #define MAX_PAYLOAD 1024  
 #define STRING_LENGTH 1024
@@ -22,8 +22,8 @@ char buf[STRING_LENGTH];
 char tag[STRING_LENGTH];
 char path[STRING_LENGTH];
 
-JNIEnv *env;
-JavaVM * jvm;
+//JNIEnv *env;
+//JavaVM * jvm;
 
 struct ControlDetail2
 {
@@ -33,7 +33,7 @@ struct ControlDetail2
 	int cmd;
 };
 
-
+/*
 JNIEnv* create_vm(JavaVM ** jvm) {
 	
     JNIEnv *env;
@@ -51,7 +51,7 @@ JNIEnv* create_vm(JavaVM ** jvm) {
     	printf("\nUnable to Launch JVM\n");   	
 
     return env;
-}
+}*/
 
 /*
 int send_to_server(int cmd, char * path, char * tag) {
@@ -153,9 +153,9 @@ int send_to_server(int cmd, char * path, char * tag) {
 
 int main(void) {
 
-	env = create_vm(&jvm);
-	if (env == NULL)
-		return 1;
+	//env = create_vm(&jvm);
+	//if (env == NULL)
+	//	return 1;
 
 	sock_fd = socket(PF_NETLINK, SOCK_RAW,NETLINK_UNUSED);
 

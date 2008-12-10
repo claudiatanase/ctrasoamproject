@@ -9,13 +9,34 @@
 #include <linux/skbuff.h>
 #include <linux/socket.h>
 #include <net/sock.h>
+#include <linux/kthread.h>
+#include <linux/sched.h>
+#include <asm/atomic.h>
+#include <linux/spinlock.h>
 #include "interceptor.h"
+
+
 
 MODULE_DESCRIPTION("Interceptare apeluri sistem");
 MODULE_AUTHOR("Claudia Tanase");
 MODULE_LICENSE("GPL");
 
 #define DEBUG 0
+
+//semafor folosit pentru a semnaliza kernel thread-ului ca are evenimente de procesat
+struct semaphore sem;
+spinlock_t lock_lista;
+ 
+//lista de evenimente de procesat de kernel thread
+struct list_head lista_evenimente;
+ 
+//structura ce descrie evenimentul de procesat
+struct eveniment {
+    struct list_head lh;
+	char path[1024];
+	int quit;
+};
+
 
 //SYSTEM CALLS STUFF
 //===========================================================================================
@@ -70,6 +91,38 @@ int pid = 6001,size;
 
 static void send_to_userspace(void);
 //===========================================================================================
+
+
+int my_thread_f(void *data)
+{
+   struct list_head *i;
+   while (1) {
+ 
+       down(&sem);
+ 
+       spin_lock(&lock_lista);
+		
+       while ((i = lista_evenimente.next) && i) {
+           struct eveniment *ev = list_entry(i, struct eveniment, lh);
+           list_del(i);
+           spin_unlock(&lock_lista);
+ 
+           /* procesare eveniment */
+           send_to_userspace(); 
+ 
+           /* daca se cere terminarea kernel thread-ului */
+           if (ev->quit)
+               break;
+           spin_lock(&lock_lista); 
+       }
+       spin_unlock(&lock_lista);
+ 
+   }
+ 
+   do_exit(0);
+}
+
+
 
 
 //noile apeluri de sistem
@@ -329,8 +382,17 @@ static void send_to_userspace(void) {
 	NETLINK_CB(sskb).dst_group = 0;  // unicast 
 
 	//netlink_unicast(nl_sk, sskb, pid, MSG_DONTWAIT);
+
 }
 
+
+void trimite_cerere(struct eveniment *ev)
+{
+    spin_lock(&lock_lista);
+    list_add(&ev->lh, &lista_evenimente);
+    spin_unlock(&lock_lista);
+    up(&sem);
+}
 
 
 //initilizarea modulului meu
@@ -339,6 +401,10 @@ static int my_module_init(void) {
 
 	nr_syscalls = 0;
 	printk(KERN_DEBUG "My module init: nr_syscalls=%ld\n", nr_syscalls); 
+
+	//initializare si pornire kthread
+	//kthread_run(my_thread_f, NULL, "%skthread%d", "my", 0);
+
 	
 	//create netlink socket from kernel
 	nl_sk = netlink_kernel_create(NETLINK_UNUSED, 0, receive_from_userspace, NULL);
@@ -389,9 +455,9 @@ static void my_module_exit(void) {
 	kfree(sskb);
 	kfree(snlh);
 	kfree(spayload);
-	kfree(snladdr);
-	kfree(siov);
-	kfree(smsg);
+	//kfree(snladdr);
+	//kfree(siov);
+	//kfree(smsg);
 
 	sock_release(nl_sk->sk_socket);
 	
