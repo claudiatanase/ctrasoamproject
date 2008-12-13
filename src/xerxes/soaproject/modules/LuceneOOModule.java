@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.util.Date;
@@ -14,11 +13,9 @@ import java.util.zip.ZipInputStream;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.demo.FileDocument;
 import org.apache.lucene.document.DateTools;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.IndexWriter;
 import org.jaxen.JaxenException;
 import org.jaxen.XPath;
@@ -128,7 +125,7 @@ public class LuceneOOModule implements Modules {
 						doc.add(new Field("ext", title.substring(startExt),
 								Field.Store.YES, Field.Index.ANALYZED));
 					doc.add(new Field("path", file.getAbsolutePath(),
-							Field.Store.YES, Field.Index.ANALYZED));
+							Field.Store.YES, Field.Index.NOT_ANALYZED));
 					doc.add(new Field("modified", DateTools.timeToString(file
 							.lastModified(), DateTools.Resolution.MINUTE),
 							Field.Store.YES, Field.Index.NOT_ANALYZED));
@@ -182,6 +179,8 @@ public class LuceneOOModule implements Modules {
 		XPath path = new JDOMXPath(
 				"//text:span | //text:p | //text:tab | //text:tab-stop | //text:a");
 		path.addNamespace("text", root.getNamespace("text").getURI());
+		
+		@SuppressWarnings("unused")
 		Namespace xlink = Namespace.getNamespace("xlink",
 				"http://www.w3.org/1999/xlink");
 		List list = path.selectNodes(doc);

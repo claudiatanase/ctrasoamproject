@@ -2,17 +2,14 @@ package xerxes.soaproject.modules;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Date;
 
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.demo.FileDocument;
 import org.apache.lucene.document.DateTools;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.IndexWriter;
 
 import xerxes.soaproject.interfaces.Modules;
@@ -103,7 +100,7 @@ public class LuceneTagsModule implements Modules {
 						doc.add(new Field("ext", title.substring(startExt),
 								Field.Store.YES, Field.Index.ANALYZED));
 					doc.add(new Field("path", file.getAbsolutePath(),
-							Field.Store.YES, Field.Index.ANALYZED));
+							Field.Store.YES, Field.Index.NOT_ANALYZED));
 					doc.add(new Field("modified", DateTools.timeToString(file
 							.lastModified(), DateTools.Resolution.MINUTE),
 							Field.Store.YES, Field.Index.NOT_ANALYZED));
