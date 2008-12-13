@@ -128,7 +128,7 @@ public class LuceneMP3Module implements Modules {
 						doc.add(new Field("ext", title.substring(startExt),
 								Field.Store.YES, Field.Index.ANALYZED));
 					doc.add(new Field("path", file.getAbsolutePath(),
-							Field.Store.YES, Field.Index.ANALYZED));
+							Field.Store.YES, Field.Index.NOT_ANALYZED));
 					doc.add(new Field("modified", DateTools.timeToString(file
 							.lastModified(), DateTools.Resolution.MINUTE),
 							Field.Store.YES, Field.Index.NOT_ANALYZED));

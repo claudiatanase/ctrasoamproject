@@ -5,32 +5,38 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Vector;
 
+import org.apache.log4j.Logger;
+
+import xerxes.soaproject.bridge.ControlDetail2;
 import xerxes.soaproject.db.DBManager;
 import xerxes.soaproject.interfaces.Constants;
 import xerxes.soaproject.interfaces.Modules;
+import xerxes.soaproject.modules.LuceneDeleteModule;
+import xerxes.soaproject.modules.LuceneMP3Module;
+import xerxes.soaproject.modules.LuceneOOModule;
+import xerxes.soaproject.modules.LucenePDFModule;
+import xerxes.soaproject.modules.LuceneTagsModule;
+import xerxes.soaproject.modules.LuceneTextModule;
+import xerxes.soaproject.tests.modules.SearchFiles;
 
 public class X3rx3sWithLucene implements Constants {
 
 	private static X3rx3sWithLucene server;
 
+	@SuppressWarnings("unused")
 	private static DBManager dbM;
+
+	static Logger log4j = Logger.getLogger("org.soarproject.xerxes");
 
 	private HashMap<String, Modules> loadedModules;
 
-	public X3rx3sWithLucene(String[] args) {
-		loadedModules = new HashMap<String, Modules>();
+	public X3rx3sWithLucene() {
+		this(new String[] {});
 	}
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-
-		server = new X3rx3sWithLucene(args);
-		// get list of existing modules in Modules dir and load
+	public X3rx3sWithLucene(String[] args) {
+		loadedModules = new HashMap<String, Modules>();
 		Class cls;
 		File directory = new File(cNodDirectory);
 		if (directory.isDirectory() == true) {
@@ -51,16 +57,15 @@ public class X3rx3sWithLucene implements Constants {
 				for (int i = 0; i < modules.length; i++)
 					if (modules[i].endsWith(".class")
 							&& modules[i].indexOf('$') < 0) {
-						System.out.println("loading " + modules[i]);
+						log4j.error("loading " + modules[i]);
 						cls = loader.loadClass(cModulesPath
 								+ modules[i].substring(0, modules[i]
 										.lastIndexOf('.')));
 
 						loadedModule = (Modules) (cls.newInstance());
-						server.loadedModules.put(loadedModule.getExtension(),
+						this.loadedModules.put(loadedModule.getExtension(),
 								loadedModule);
-						System.out.println("Added "
-								+ loadedModule.getExtension());
+						log4j.error("Added " + loadedModule.getExtension());
 
 					}
 
@@ -72,41 +77,47 @@ public class X3rx3sWithLucene implements Constants {
 				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
+				log4j
+						.error("Nu am putut incarca modulele dinamic.Le incarcam static.");
+				LuceneDeleteModule ldm = new LuceneDeleteModule();
+				LuceneMP3Module lmp3 = new LuceneMP3Module();
+				LuceneOOModule loo = new LuceneOOModule();
+				LucenePDFModule lpdf = new LucenePDFModule();
+				LuceneTagsModule ltag = new LuceneTagsModule();
+				LuceneTextModule ltext = new LuceneTextModule();
+
+				this.loadedModules.put(ldm.getExtension(), ldm);
+				this.loadedModules.put(lmp3.getExtension(), lmp3);
+				this.loadedModules.put(loo.getExtension(), loo);
+				this.loadedModules.put(lpdf.getExtension(), lpdf);
+				this.loadedModules.put(ltag.getExtension(), ltag);
+				this.loadedModules.put(ltext.getExtension(), ltext);
 			}
 
 		}
-		// create and test connection to DB
-		// dbM = new DBManager();
-		// load data
-		// ce-ar trebui sa load-uiasca?
+
+	}
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+
+		server = new X3rx3sWithLucene(args);
+
 		File f = new File("tests");
-		Modules module;
-		for (String file : f.list())
-			if (file.charAt(0) != '.') {
-				if (file.substring(file.lastIndexOf('.') + 1).equals("odt")
-						|| file.substring(file.lastIndexOf('.') + 1).equals(
-								"odp")
-						|| file.substring(file.lastIndexOf('.') + 1).equals(
-								"ods"))
-					module = server.loadedModules.get("oo");
-				else
-					module = server.loadedModules.get(file.substring(file
-							.lastIndexOf('.') + 1));
-				System.out.println("Pentru " + file + " module =" + module);
 
-				if (module == null)
-					module = server.loadedModules.get("txt");
-
-				module.parseFile("tests/" + file, new String[] {});
+		for (File file : f.listFiles())
+			if (file.getName().charAt(0) != '.') {
+				server.addMonitoredFile(file.getName(), file.getAbsolutePath(),
+						"");
 			}
 
-		// server.loadedModules.get("txt").parseFile("tests/Razvan.txt",new
-		// String[]{"mama","are","mere"});
+		// server.removeFile("/home/csrazvan/workspace/SOAProj/tests/test.mp3");
 
-		// server.loadedModules.get("mp3").parseFile("tests/test.mp3");
-		// server.loadedModules.get("oo").parseFile("tests/ootest.odp");
-
-		// spawn thread and prepare to accept commands
+		// server.editTagsForFile("test2.mp3",
+		// "/home/csrazvan/workspace/SOAProj/tests/test2.mp3",
+		// "mama razvan textFile shit");
 
 	}
 
@@ -116,19 +127,80 @@ public class X3rx3sWithLucene implements Constants {
 	// TODO remind CLa to append / at the end of the fileName to mark dir files.
 
 	public void addMonitoredFile(String fileName, String filePath, String tags) {
-		int fileType;
-		int fileFlag = 0;
-		String[] arrayOfTags = tags.split(",");
-		HashSet<String> tagsForFile;
-		if (fileName.charAt(fileName.length() - 1) == File.pathSeparatorChar)
-			fileType = Constants.CDirectory;
-		else {
-			fileType = Constants.CFIle;
+		File f;
+		Modules module = null;
+		f = new File(filePath);
+		if (f.isDirectory())
+			for (File fx : f.listFiles()) {
+				addMonitoredFile(fx.getName(),fx.getAbsolutePath(), tags);
+			}
+		else 
+		if (fileName.charAt(0) != '.') {
+			if (fileName.substring(fileName.lastIndexOf('.') + 1).equals("odt")
+					|| fileName.substring(fileName.lastIndexOf('.') + 1)
+							.equals("odp")
+					|| fileName.substring(fileName.lastIndexOf('.') + 1)
+							.equals("ods"))
+				module = server.loadedModules.get("oo");
+			else
+				module = server.loadedModules.get(fileName.substring(fileName
+						.lastIndexOf('.') + 1));
+			System.out.println("Pentru " + fileName + " module =" + module);
+
+			if (module == null)
+				module = server.loadedModules.get("txt");
+
+			module.parseFile(filePath, tags.split(" "));
 
 		}
+	}
 
-		tagsForFile = dbM.getTagsForFile(filePath);
+	public boolean removeFile(String filePath) {
+		boolean result = false;
+		// ((LuceneDeleteModule) (server.loadedModules.get("deleteFile")))
+		// .deleteFile(filePath);
+		LuceneDeleteModule ldm = new LuceneDeleteModule();
+		ldm.deleteFile(filePath);
+		return result;
+	}
 
+	public void editTagsForFile(String fileName, String filePath, String tags) {
+
+		@SuppressWarnings("unused")
+		boolean result = ((LuceneDeleteModule) (server.loadedModules
+				.get("deleteFile"))).deleteFile(filePath);
+		addMonitoredFile(fileName, filePath, tags);
+	}
+
+	public void testCLI() {
+		System.out.println("CLI WORKING");
+	}
+
+	public static String msgReceivedString = "id:%d,cmd=%d,path=%s,tag=%s";
+
+	public static int testCLI2(ControlDetail2 ctrlDetail) {
+		log4j.info(String.format(msgReceivedString, ctrlDetail.ID,
+				ctrlDetail.cmd, ctrlDetail.path, ctrlDetail.tag));
+		File f;
+		if (ctrlDetail.cmd == ADD || ctrlDetail.cmd==TADD) {
+			f = new File(ctrlDetail.path);
+			if (server == null)
+				server = new X3rx3sWithLucene();
+
+			server.addMonitoredFile(f.getName(), f.getAbsolutePath(),
+					ctrlDetail.tag);
+
+		} else if (ctrlDetail.cmd ==SEARCH){
+			try {
+				SearchFiles.simpleSearch(ctrlDetail.path);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		else if (ctrlDetail.cmd == REM){
+			server.removeFile(ctrlDetail.path);
+		}
+		return 1;
 	}
 
 }

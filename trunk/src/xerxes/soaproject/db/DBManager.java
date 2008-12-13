@@ -13,9 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.TreeMap;
 import java.util.Vector;
 
 public class DBManager {
@@ -55,6 +53,7 @@ public class DBManager {
 
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 			con = DriverManager.getConnection(url_db, user, pass);
+			@SuppressWarnings("unused")
 			Statement stmt = con.createStatement();
 			// creare DB
 
