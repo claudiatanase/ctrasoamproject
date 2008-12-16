@@ -93,23 +93,23 @@ public class X3rx3s implements Constants {
 		int fileId = dbM
 				.addMFile(fileName, filePath, fileType, fileFlag, false);
 
-		tagsForFile = dbM.getTagsForFile(filePath);
-		for (int i = 0; i < arrayOfTags.length; i++) {
-			dbM.addTag(arrayOfTags[i]);
-			tagsForFile.add(arrayOfTags[i]);
-		}
-		arrayOfTags = (String[]) tagsForFile.toArray();
-		dbM.markFile(fileId, arrayOfTags);
+//		tagsForFile = dbM.getTagsForFile(filePath);
+//		for (int i = 0; i < arrayOfTags.length; i++) {
+//			dbM.addTag(arrayOfTags[i]);
+//			tagsForFile.add(arrayOfTags[i]);
+//		}
+//		arrayOfTags = (String[]) tagsForFile.toArray();
+//		dbM.markFile(fileId, arrayOfTags);
 
 	}
 	
-	public String[] searchByTags(String tags){
-		String[] tagsList=tags.split(",");
-		Vector<String> results;
-		results=dbM.getFilesWithTag(tagsList[0]);
-		int i=1;
-		while(i<tagsList.length)
-			results.retainAll(dbM.getFilesWithTag(tagsList[i++]));
-		return (String[])results.toArray();
-	}
+//	public String[] searchByTags(String tags){
+//		String[] tagsList=tags.split(",");
+//		Vector<String> results;
+//		results=dbM.getFilesWithTag(tagsList[0]);
+//		int i=1;
+//		while(i<tagsList.length)
+//			results.retainAll(dbM.getFilesWithTag(tagsList[i++]));
+//		return (String[])results.toArray();
+//	}
 }

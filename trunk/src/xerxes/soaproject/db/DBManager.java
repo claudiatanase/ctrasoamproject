@@ -56,7 +56,16 @@ public class DBManager {
 			@SuppressWarnings("unused")
 			Statement stmt = con.createStatement();
 			// creare DB
-
+			stmt.executeUpdate("CREATE TABLE if not exists `MFileList` ("
+					+ " `MFileId` int(11) NOT NULL AUTO_INCREMENT,"
+					+ " `MFileName` varchar(255) NOT NULL,"
+					+ " `MFilePath` varchar(255) NOT NULL,"
+					+ " `MFileType` int(11) NOT NULL,"
+					+ " `MFileFlag`  int(11) NOT NULL,"
+					+ " `Tainted` int(11) NOT NULL,"
+					+ " `Time` datetime NOT NULL,"
+					+ " PRIMARY KEY (`MFileId`,`MFilePath`)"
+					+ ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 			/*
 			 * stmt.executeUpdate("CREATE TABLE if not exists `tags` (" + "
 			 * `TagId` int(11) NOT NULL AUTO_INCREMENT," + " `FileName`
@@ -202,244 +211,58 @@ public class DBManager {
 		return found;
 	}
 
-	/**
-	 * Adds a tag to the tags library.
-	 * 
-	 * @param tagName
-	 */
-	public void addTag(String tagName) {
-		try {
-
-			if (!tagExists(tagName)) {
-				PreparedStatement stmt = con
-						.prepareStatement("insert into taglist values (0,?)");
-				stmt.setString(1, tagName);
-				stmt.executeUpdate();
-			}
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-	}
-
-	/**
-	 * Tests if tag exists
-	 * 
-	 * @param tagName
-	 * @return
-	 */
-	public boolean tagExists(String tagName) {
-		boolean found = false;
+	public String[] getTaintedFiles(int number) {
+		Vector<String> taintedFiles = new Vector<String>();
+		String path = null;
 		try {
 			PreparedStatement stmt = con
-					.prepareStatement("select count(*) as count from tagList where TagName=?");
-
-			stmt.setString(1, tagName);
+					.prepareStatement("select * from mfilelist where tainted =1 order by MFileId Limit ?");
+			stmt.setInt(1, number);
 			stmt.execute();
 			ResultSet rs = stmt.getResultSet();
 			while (rs.next()) {
-				String numar = (rs.getString("count"));
-				if (Integer.parseInt(numar) != 0)
-					found = true;
+				path = (rs.getString("MFilePath"));
+				taintedFiles.add(path);
 			}
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return found;
+		return (String[]) (taintedFiles.toArray());
 	}
 
-	/**
-	 * Get a tag specified by tagId
-	 * 
-	 * @param tagId
-	 * @return
-	 */
-	public String getTagNameById(int tagId) {
-		try {
-
-			PreparedStatement stmt = con
-					.prepareStatement("select * from taglist where tagId=?");
-			stmt.setInt(1, tagId);
-			stmt.execute();
-			ResultSet rs = stmt.getResultSet();
-			String tag;
-			while (rs.next()) {
-				tag = (rs.getString("TagName"));
-				return tag;
-			}
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
-	 * Get a tagID using tagName
-	 * 
-	 * @param tagName
-	 * @return
-	 */
-	public int getTagIdByName(String tagName) {
-		try {
-
-			PreparedStatement stmt = con
-					.prepareStatement("select * from taglist where tagName=?");
-			stmt.setString(1, tagName);
-			stmt.execute();
-			ResultSet rs = stmt.getResultSet();
-			String tag;
-			while (rs.next()) {
-				tag = (rs.getString("TagId"));
-				return Integer.parseInt(tag);
-			}
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return -1;
-	}
-
-	/**
-	 * Return all tags
-	 * 
-	 * @return
-	 */
-	public Vector<String> getTags() {
-		Vector<String> tags = new Vector<String>();
+	public void markFile(boolean tainted, String path) {
 		try {
 			PreparedStatement stmt = con
-					.prepareStatement("select * from tagList");
-			stmt.execute();
-			ResultSet rs = stmt.getResultSet();
-			String tag;
-			while (rs.next()) {
-				tag = (rs.getString("TagName"));
-				tags.add(tag);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return tags;
-	}
-
-	/**
-	 * 
-	 * @param fileId
-	 * @param tags
-	 */
-	public void markFile(int fileId, String[] tags) {
-
-		try {
-
-			PreparedStatement stmtInsert = con
-					.prepareStatement("insert into tags values(0,?,?,?)");
+					.prepareStatement("update * from mfilelist where MFilePath =? set tainted = ?,mfilelist.time=?");
 			Date d = new Date(Calendar.getInstance().getTimeInMillis());
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			for (int i = 0; i < tags.length; i++) {
-				stmtInsert.setInt(1, fileId);
-
-				stmtInsert.setInt(2, getTagIdByName(tags[i]));
-				stmtInsert.setString(3, sdf.format(d).toString());
-			}
-
-		} catch (SQLException e) {
-
-		}
-	}
-
-	public HashSet<String> getTagsForFile(String filePath) {
-		HashSet<String> tags = new HashSet<String>();
-
-		try {
-			PreparedStatement t = con
-					.prepareStatement("select * from mfilelist,tags,taglist where mfilelist.MFilePath=? and mfilelist.MFileId= tags.fileId and tags.tag=taglist.tagId");
-			t.setString(1, filePath);
-			t.execute();
-			ResultSet rs = t.getResultSet();
-
-			while (rs.next()) {
-				tags.add(rs.getString("TagName"));
-
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return tags;
-	}
-
-	/**
-	 * Get Files with tags
-	 */
-	public Vector<String> getFilesWithTag(String tag){
-		Vector<String> files=new Vector<String>();
- 		try{
-			PreparedStatement stmt=con.prepareStatement("select * from tags,mfilelist,taglist where taglist.tagName= ? and taglist.TagId = tags.Tag and taglist.FileId = mfilelist.mfileId");
-			stmt.setString(1, tag);
+			
+			stmt.setString(1, path);
+			stmt.setInt(2, (tainted ? 1 : 0));
+			stmt.setString(3, sdf.format(d).toString());
 			stmt.execute();
-			ResultSet rs=stmt.getResultSet();
-			while(rs.next()){
-				files.add(rs.getString("mfilepath"));
-			}
-		}catch(SQLException e ){
+
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return files;
 	}
 
-	/**
-	 * Adds a search query to the database
-	 * 
-	 * @param tags
-	 * @return
-	 */
-	public synchronized int addSearch(String[] tags) {
-		int sId = -1;
+	public void markFiles(boolean tainted, String[] pathList) {
 		try {
-			PreparedStatement stmtGetMax = con
-					.prepareStatement("select max(searchId) as max from searchCache");
-			PreparedStatement stmtInsert = con
-					.prepareStatement("insert into searchCache values (0,?,?)");
-			stmtGetMax.execute();
-			ResultSet rs = stmtGetMax.getResultSet();
-			while (rs.next()) {
-				sId = (rs.getInt("max"));
-			}
-			for (int i = 0; i < tags.length; i++) {
-				stmtInsert.setInt(1, sId);
-				stmtInsert.setString(2, tags[i]);
-				stmtInsert.executeUpdate();
+			PreparedStatement stmt = con
+					.prepareStatement("update * from mfilelist where MFilePath =? set tainted = ?,mfilelist.time=?");
+			Date d = new Date(Calendar.getInstance().getTimeInMillis());
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			
+			for (String path : pathList) {
+				stmt.setString(1, path);
+				stmt.setInt(2, (tainted ? 1 : 0));
+				stmt.setString(3, sdf.format(d).toString());
+				stmt.execute();
 			}
 
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return sId;
-	}
-
-	/**
-	 * Adds the answer to a specified query
-	 * 
-	 * @param answers
-	 * @param searchId
-	 */
-	public void setAnswer(String[] answers, int searchId) {
-		try {
-
-			PreparedStatement stmtInsert = con
-					.prepareStatement("insert into answerCache values (0,?,?)");
-
-			for (int i = 0; i < answers.length; i++) {
-				stmtInsert.setInt(1, searchId);
-				stmtInsert.setString(2, answers[i]);
-				stmtInsert.executeUpdate();
-			}
-
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-
-	//
 }
