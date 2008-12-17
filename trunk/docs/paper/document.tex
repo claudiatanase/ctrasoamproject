@@ -1,0 +1,142 @@
+% This is a simple LaTex sample document that gives a submission format
+%   for IEEE PAMI-TC conference submissions.  Use at your own risk.
+
+% Make two column format for LaTex 2e.
+\documentclass[10pt,twocolumn]{article}
+\usepackage{times}
+
+% Use following instead for LaTex 2.09 (may need some other mods as well).
+% \documentstyle[times,twocolumn]{article}
+
+% Set dimensions of columns, gap between columns, and paragraph indent 
+\setlength{\textheight}{8.875in}
+\setlength{\textwidth}{6.875in}
+\setlength{\columnsep}{0.3125in}
+\setlength{\topmargin}{0in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\parindent}{1pc}
+\setlength{\oddsidemargin}{-.1875in}  % Centers text.
+\setlength{\evensidemargin}{-.1875in}
+
+% Add the period after section numbers.  Adjust spacing.
+\newcommand{\Section}[1]{\vspace{-8pt}\section{\hskip -1em.~~#1}\vspace{-3pt}} 
+\newcommand{\SubSection}[1]{\vspace{-3pt}\subsection{\hskip -1em.~~#1}
+     	\vspace{-3pt}}
+
+
+\begin{document}
+
+% Don't want date printed
+\date{}
+
+% Make title bold and 14 pt font (Latex default is non-bold, 16pt) 
+\title{\Large\bf Xerxes : an advanced search system for your desktop}
+
+% CVPR PAPER SUBMISSIONS MUST BE ANONYMOUS. DO NOT PUT YOUR NAME HERE.
+% PLEASE PUT YOUR CVPR PAPER NUMBER IN THIS FIELD IF YOU KNOW IT.
+% For single author (just remove % characters)
+%\author{I. M. Anonymous \\
+%  My Department \\
+%  My Institute \\
+%  My City, STATE, zip}
+
+% CVPR PAPER SUBMISSIONS MUST BE ANONYMOUS. DO NOT PUT YOUR NAMES HERE.
+% PLEASE PUT YOUR CVPR PAPER NUMBER IN THIS FIELD IF YOU KNOW IT.
+% For two authors (default example)
+\author{\begin{tabular}[t]{c@{\extracolsep{8em}}c} 
+Claudia Tanase  & Razvan Alecsandrescu \\
+ \\
+        SPBA & SPBA \\
+        UPB & UPB \\
+        Bucharest, Romania & Bucharest, Romania 
+\end{tabular}}
+
+\maketitle
+
+
+\section*{\centering Abstract}
+
+{\em
+This paper presents an advanced mechanism used to organize and seach files. The
+system uses a combination of semantic labeling, file parsing and Virtual
+Folders. }
+
+\Section{Introduction}
+
+One of the most important things for a computer user is to be able to organize
+a large number of files and search for a specific one in a natural manner. 
+
+Most of the current search applications can be used to find files using
+information about the file name, file type or time/date information. 
+But this only allows for simple searches. 
+
+There is a lot to learn from web search engines like Google search engine. Not
+only does it allow for simple searches but also for more complex searches:
+including content analysis. 
+
+This paper details the arhitecture of an advanced system for file
+organization. Section 2 describes existing applications, Section 3
+details the implementation of our system and Section 4 presents the results of
+tests performed, conclusions and future work.
+
+\SubSection{Previous Work}
+
+Most of the searches that we can perform using standard OS tools are limited to
+directory namespaces. For example in Windows we have the Search program that can
+perform searches filtering the results by name,type,the time it was last modified, 
+Unix shell wildcard patterns are useful for matching against
+small numbers of files, and GNU locate for finding files in the directory hierarchy.
+The biggest issue with these applications is that to perform queries on the
+\textbf{data} inside a file can be a laborious procedure because of the linear
+complexity invoved. Fast and reliable searches require an indexing structure.
+
+To create more advanced search systems there are 2 aproaches that can be taken. 
+The first one which is the most commonly used is to develop applications that
+use the file system to obtain informations about files and then process, index
+and allow the users to perform queries.
+
+The second one is to implement \textit{file indexing inside the file system}. 
+
+There are various pros and cons to each method of implementing a search system.
+For example file indexing inside the file system assures that the index is
+synchronized with the reality of the file system. The system assures us that
+once a file is modified the changes will show up in the index. Also there can
+be a small performance boost caused by the fact that processing a file that
+already exists in the cache is fast. 
+
+A application separated from the file system must keep track of all changes
+(when files are moved, deleted, renamed, modified ) which is a little more
+complex.
+
+
+
+
+\Section{Summary and Conclusions}
+
+This template will get you through the minimum article, i.e., with no
+figures or equations.  To include those, please refer to your LaTeX
+manual and the IEEE publications guidelines.  However, for a vision
+conference you will probably want the following equation somewhere:
+$$g(x) = {1\over\sqrt{2\pi}\sigma}e^{-x^2/2\sigma^2}$$
+Good Luck!
+
+% This is how to do an unnumbered section (note asterisk).
+\section*{Acknowledgments}
+bla bla bla
+\begin{thebibliography}{9}
+\small  % Use 9 point text.
+
+% CVPR PAPER SUBMISSIONS MUST BE ANONYMOUS. DO NOT PUT YOUR NAME(S)
+% IN ANY OF THE REFERENCES.
+
+\bibitem{key:FOSMLV}
+Mukund Gunti, Mark Pariente, Ting-Fang Yen, Stefan Zickler,
+{\em File Organization and Search using Metadata, Labels, and Virtual Folders},
+December 15, 2005
+\bibitem{foo:baz}
+Srinath Sridhar, Jeffrey Stylos and Noam Zeilberger,\\
+{\em A Searchable-by-Content File System,} May 11, 2005
+
+\end{thebibliography}
+\end{document}
