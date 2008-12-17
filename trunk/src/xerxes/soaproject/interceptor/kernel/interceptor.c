@@ -13,6 +13,7 @@
 #include <linux/sched.h>
 #include <asm/atomic.h>
 #include <linux/spinlock.h>
+#include <asm/semaphore.h>
 #include "interceptor.h"
 
 
@@ -25,15 +26,19 @@ MODULE_LICENSE("GPL");
 
 //semafor folosit pentru a semnaliza kernel thread-ului ca are evenimente de procesat
 struct semaphore sem;
+struct semaphore nlsem;
 spinlock_t lock_lista;
+spinlock_t lock_send;
  
 //lista de evenimente de procesat de kernel thread
-struct list_head lista_evenimente;
+//struct list_head lista_evenimente;
+LIST_HEAD(lista_evenimente);
  
 //structura ce descrie evenimentul de procesat
 struct eveniment {
-    struct list_head lh;
+    struct list_head list;
 	char path[1024];
+	int syscall;
 	int quit;
 };
 
@@ -69,54 +74,114 @@ long nr_syscalls = 0;
 //===========================================================================================
 //structures needed to send/receive data - 
 //for now they are global, I will put them in the right place later
+#define MAX_PAYLOAD 1024  
+#define STRING_LENGTH 1024
 struct sock *nl_sk = NULL;
 u32 userspace_pid = 6001;
-struct sk_buff *skb = NULL;
-struct nlmsghdr *nlh = NULL;
-u8 *payload = NULL;
-struct sockaddr_nl *nladdr=NULL;
-struct iovec *iov=NULL;
-struct msghdr *msg=NULL;
 
-struct sk_buff *sskb = NULL;
-struct nlmsghdr *snlh = NULL;
-u8 *spayload = NULL;
-struct sockaddr_nl *snladdr=NULL;
-struct iovec *siov=NULL;
-struct msghdr *smsg=NULL;
 
 int err,pos;
 int pid = 6001,size;
 
 
-static void send_to_userspace(void);
+static void send_to_userspace(int syscall, const char path[STRING_LENGTH]);
 //===========================================================================================
 
 
+
+
+void trimite_cerere(struct eveniment *ev)
+{
+    spin_lock(&lock_lista);
+    list_add(&ev->list, &lista_evenimente);
+    spin_unlock(&lock_lista);
+    up(&sem);
+}
+ 
+static int add_ev(int syscall, const char path[1024])
+{
+        struct eveniment * ple = (struct eveniment *)
+                    kmalloc(sizeof(struct eveniment), GFP_KERNEL);
+ 
+        if (!ple)
+                return -ENOMEM;
+ 
+        INIT_LIST_HEAD(&ple->list);
+        strcpy(ple->path, path);
+		ple->syscall = syscall;
+
+		//printk(KERN_DEBUG "[add_ev]: syscall=%d, path=%s\n", ple->syscall, ple->path);
+		spin_lock(&lock_lista);
+        list_add(&ple->list, &lista_evenimente);
+		spin_unlock(&lock_lista);
+
+		up(&sem);
+ 
+        return 0;
+}
+ 
+static int del_ev(void)
+{
+        struct list_head *i, *tmp;
+        struct eveniment *ple;
+ 
+        list_for_each_safe(i, tmp, &lista_evenimente) {
+                ple = list_entry(i, struct eveniment, list);
+				                
+				spin_lock(&lock_lista);
+                list_del(i);
+				spin_unlock(&lock_lista);
+                kfree(ple);
+                
+                
+        }
+ 
+        return 0;
+}
+ 
+static void destroy_list(void)
+{
+        struct list_head *i, *n;
+        struct eveniment *ple;
+ 
+		spin_lock(&lock_lista);
+        list_for_each_safe(i, n, &lista_evenimente) {
+                ple = list_entry(i, struct eveniment, list);
+                list_del(i);
+                kfree(ple);
+        }
+		spin_unlock(&lock_lista);
+}
+
 int my_thread_f(void *data)
 {
-   struct list_head *i;
+   //struct list_head *i;
+   struct list_head *i, *tmp;
+   struct eveniment *ple;
+   int count = 0;
+   
    while (1) {
  
-       down(&sem);
- 
-       spin_lock(&lock_lista);
-		
-       while ((i = lista_evenimente.next) && i) {
-           struct eveniment *ev = list_entry(i, struct eveniment, lh);
-           list_del(i);
-           spin_unlock(&lock_lista);
- 
-           /* procesare eveniment */
-           send_to_userspace(); 
- 
-           /* daca se cere terminarea kernel thread-ului */
-           if (ev->quit)
-               break;
-           spin_lock(&lock_lista); 
-       }
-       spin_unlock(&lock_lista);
- 
+	   count++;
+	   printk(KERN_DEBUG "[my_thread%d]inainte de down\n", count);
+       down(&sem);	
+	   printk(KERN_DEBUG "[my_thread%d]dupa down\n", count);
+	   
+	   
+       list_for_each_safe(i, tmp, &lista_evenimente) {					
+                ple = list_entry(i, struct eveniment, list);				
+				printk(KERN_DEBUG "[my_thread]%d, %s\n", ple->syscall, ple->path);
+				spin_lock(&lock_lista);
+				list_del(i);
+				spin_unlock(&lock_lista);
+				
+				// procesare eveniment 
+				send_to_userspace(ple->syscall, ple->path); 			
+				
+                kfree(ple); 
+
+				down(&sem);
+       }	    
    }
  
    do_exit(0);
@@ -130,7 +195,7 @@ int my_thread_f(void *data)
 asmlinkage long my_sys_mkdir(const char __user *pathname, int mode) {
 
 	//send interesting data to server
-	//send_to_userspace(pid, __NR_mkdir, pathname);
+	add_ev(__NR_mkdir, pathname);
 	nr_syscalls++;
 
 	//call old sys_mkdir
@@ -141,7 +206,7 @@ asmlinkage long my_sys_mkdir(const char __user *pathname, int mode) {
 asmlinkage long my_sys_open(const char __user *filename, int flags, int mode) {
 
 		//send interesting data to server
-		send_to_userspace();
+		add_ev(__NR_open, filename);
 		nr_syscalls++;
 
 		//call old syscall
@@ -153,7 +218,7 @@ asmlinkage long my_sys_open(const char __user *filename, int flags, int mode) {
 asmlinkage long my_sys_creat(const char __user * pathname, int mode) {
 
 	//send interesting data to server
-	//send_to_userspace(pid, __NR_creat, pathname);
+	add_ev(__NR_creat, pathname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -164,7 +229,7 @@ asmlinkage long my_sys_creat(const char __user * pathname, int mode) {
 asmlinkage ssize_t my_sys_write(unsigned int fd, const char __user * buf, size_t count) {
 
 	//send interesting data to server
-	//send_to_userspace(pid, __NR_write, "test");
+	//add_ev(__NR_write, filename);
 	nr_syscalls++;
 
 	//call old syscall
@@ -175,7 +240,8 @@ asmlinkage ssize_t my_sys_write(unsigned int fd, const char __user * buf, size_t
 asmlinkage long my_sys_link(const char __user *oldname, const char __user *newname) {
 
 	//send interesting data to server	
-	//send_to_userspace(pid, __NR_link, newname);
+	add_ev(__NR_link, newname);
+	add_ev(__NR_link, oldname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -186,7 +252,7 @@ asmlinkage long my_sys_link(const char __user *oldname, const char __user *newna
 asmlinkage long my_sys_unlink(const char __user *pathname) {
 
 	//send interesting data to server		
-	//send_to_userspace(pid, __NR_unlink, pathname);
+	add_ev(__NR_unlink, pathname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -198,7 +264,7 @@ asmlinkage long my_sys_unlink(const char __user *pathname) {
 asmlinkage long my_sys_mknod(const char __user *filename, int mode, unsigned dev) {
 
 	//send interesting data to server		
-	//send_to_userspace(pid, __NR_mknod, filename);
+	add_ev(__NR_mknod, filename);
 	nr_syscalls++;
 
 	//call old syscall
@@ -209,7 +275,7 @@ asmlinkage long my_sys_mknod(const char __user *filename, int mode, unsigned dev
 asmlinkage long my_sys_rmdir(const char __user *pathname) {
 	
 	//send interesting data to server		
-	//send_to_userspace(pid, __NR_rmdir, pathname);
+	add_ev(__NR_rmdir, pathname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -220,7 +286,8 @@ asmlinkage long my_sys_rmdir(const char __user *pathname) {
 asmlinkage long my_sys_rename(const char __user *oldname, const char __user *newname) {
 
 	//send interesting data to server		
-	//send_to_userspace(pid, __NR_rename, newname);
+	add_ev(__NR_rename, newname);
+	add_ev(__NR_rename, oldname);
 	nr_syscalls++;
 
 	//call old syscall
@@ -294,7 +361,9 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid){
 //functia care imi extrage mesajul trimis de la aplicatia userspace
 void receive_from_userspace(struct sock *sk, int len)
 {
-	
+	struct sk_buff *skb = NULL;
+	struct nlmsghdr *nlh = NULL;
+	u8 *payload = NULL;
 
 	//inlocuiesc apelul de sistem initial cu apelul meu de interceptare	
 	old_sys_open = sys_call_table[__NR_open];
@@ -359,40 +428,82 @@ void receive_from_userspace(struct sock *sk, int len)
 		printk(KERN_DEBUG "FILLED DATA\n");
 		
 		netlink_unicast(nl_sk, skb, pid, MSG_DONTWAIT);
+
+		//kfree(skb);
 		
 		printk(KERN_DEBUG "DATA sent\n");
 	}
 }
 
 //functia care trimite mesaje catre aplicatia userspace
-static void send_to_userspace(void) {
+static void send_to_userspace(int syscall, const char path[1024]) {
 
-	//char temp[4096];
+	char temp[1100];
+	struct sk_buff *sskb = NULL;
+	struct nlmsghdr *snlh = NULL;
+	char *pos;
 
-	// kernel is changing the nlh's payload 
-	printk (KERN_DEBUG "Intercepted syscall:Filling data\n");
-	//sprintf(temp, "syscallno=%d\n", syscallno);
-	//strcpy(NLMSG_DATA(snlh),temp);
-	strcpy(NLMSG_DATA(snlh),"Intercepted syscall!\n");
-	printk (KERN_DEBUG "Filled data: sending to process %d\n", pid);
+	//down(&nlsem);
+	//spin_lock(&lock_send);
 
-	//NETLINK_CB(skb).groups = 0; // not in mcast group 
-	NETLINK_CB(sskb).pid = 0;      // from kernel 
-	NETLINK_CB(sskb).dst_pid = pid;
-	NETLINK_CB(sskb).dst_group = 0;  // unicast 
+	sskb=alloc_skb(NLMSG_SPACE(MAX_PAYLOAD),GFP_ATOMIC);
 
-	//netlink_unicast(nl_sk, sskb, pid, MSG_DONTWAIT);
+	if (sskb == NULL) {
+		//spin_unlock(&lock_send);
+		//up(&nlsem);
+		return;
+	}
+	
+	snlh = (struct nlmsghdr *)sskb->data;
 
+	if (snlh == NULL) {
+		//if (sskb)
+		//	kfree(sskb);
+		//spin_unlock(&lock_send);
+		//up(&nlsem);
+		return;
+	}
+
+	snlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
+	snlh->nlmsg_pid = 0;  // from kernel 
+	snlh->nlmsg_flags = 0;
+	sprintf(temp, "%d,%s", syscall, path);
+	strcpy(NLMSG_DATA(snlh), temp);
+
+	sskb->len = sizeof(struct nlmsghdr) + NLMSG_SPACE(MAX_PAYLOAD);
+	sskb->tail = sskb->data + sskb->len;
+	sskb->truesize = sskb->len;
+
+		
+	//NETLINK_CB(sskb).groups = 1;
+	NETLINK_CB(sskb).pid = 0;  // from kernel 
+	NETLINK_CB(sskb).dst_pid = pid;  
+	NETLINK_CB(sskb).dst_group = 0;
+		
+	printk(KERN_DEBUG "sending to userspace!\n");
+
+	//spin_unlock(&lock_send);
+
+	//multicast the message to all listening processes
+	//netlink_broadcast(nl_sk, sskb, 0, 1, GFP_KERNEL);
+	netlink_unicast(nl_sk, sskb, pid, MSG_DONTWAIT);
+
+	//spin_lock(&lock_send);
+
+	printk(KERN_DEBUG "SUCCESS!\n");
+
+	//if (sskb)
+	//	kfree(sskb);
+	
+	//up(&nlsem);
+	//spin_unlock(&lock_send);
+
+	return;
+	
 }
 
 
-void trimite_cerere(struct eveniment *ev)
-{
-    spin_lock(&lock_lista);
-    list_add(&ev->lh, &lista_evenimente);
-    spin_unlock(&lock_lista);
-    up(&sem);
-}
+
 
 
 //initilizarea modulului meu
@@ -402,8 +513,13 @@ static int my_module_init(void) {
 	nr_syscalls = 0;
 	printk(KERN_DEBUG "My module init: nr_syscalls=%ld\n", nr_syscalls); 
 
+	sema_init(&sem, 0);
+	sema_init(&sem, 1);
+	spin_lock_init(&lock_lista);
+	spin_lock_init(&lock_send);
+
 	//initializare si pornire kthread
-	//kthread_run(my_thread_f, NULL, "%skthread%d", "my", 0);
+	kthread_run(my_thread_f, NULL, "%skthread%d", "i", 0);
 
 	
 	//create netlink socket from kernel
@@ -423,16 +539,6 @@ static int my_module_init(void) {
 	
 
 	
-
-
-	sskb = (struct sk_buff *)kmalloc(sizeof(struct sk_buff), GFP_KERNEL);
-	snlh = (struct nlmsghdr *)kmalloc(sizeof(struct nlmsghdr), GFP_KERNEL);
-	spayload = (u8 *)kmalloc(sizeof(u8), GFP_KERNEL);
-	snladdr = (struct sockaddr_nl *)kmalloc(sizeof(struct sockaddr_nl), GFP_KERNEL);
-	siov = (struct iovec *)kmalloc(sizeof(struct iovec), GFP_KERNEL);
-	smsg = (struct msghdr *)kmalloc(sizeof(struct msghdr), GFP_KERNEL);
-
-
 	//try to receive message from userspace telling us his pid
 	//skb = skb_recv_datagram(nl_sk, 0, 0, &err);
 	
@@ -450,16 +556,13 @@ static void my_module_exit(void) {
 		sys_call_table[i] = old_sys_calls[i];
 	}
 
-	kfree(skb);
+	//kfree(skb);
 
-	kfree(sskb);
-	kfree(snlh);
-	kfree(spayload);
-	//kfree(snladdr);
-	//kfree(siov);
-	//kfree(smsg);
+	
 
 	sock_release(nl_sk->sk_socket);
+
+	destroy_list();
 	
 	printk(KERN_DEBUG "My module exit: nr_syscalls = %ld\n", nr_syscalls);    
 }

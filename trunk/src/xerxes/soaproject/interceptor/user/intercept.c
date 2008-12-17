@@ -190,14 +190,37 @@ int main(void) {
 
 	sendmsg(sock_fd, &msg, 0);
 
+	memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
+	recvmsg(sock_fd, &msg, 0);
+	printf(" Received message payload: %s\n", NLMSG_DATA(nlh));
 	
 	// Read message from kernel 
 	while (1) {
+		char str[1024];
+		char * pch;
+		char path[1024], syscall[10];
+
+		bzero(str, STRING_LENGTH);
+		bzero(path, STRING_LENGTH);
+		bzero(syscall, STRING_LENGTH);
+
 		memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
 		recvmsg(sock_fd, &msg, 0);
 		printf(" Received message payload: %s\n", NLMSG_DATA(nlh));
 
-		send_to_server(cmd, path, tag);
+		sprintf(str, "%s", NLMSG_DATA(nlh));
+
+		pch = strtok (str,",");
+		if (pch != NULL) {
+			sprintf(syscall, "%s", pch);
+			pch = strtok (NULL, ",");
+			if (pch != NULL)
+				sprintf(path, "%s", pch);
+		}
+
+		printf(" syscall=%s, path=%s\n", syscall, path);		
+
+		send_to_server(cmd, path, syscall);
 
 		//break command
 		//if (cmd == QUIT) 
