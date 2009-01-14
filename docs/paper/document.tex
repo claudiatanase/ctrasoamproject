@@ -23,7 +23,8 @@
 \newcommand{\Section}[1]{\vspace{-8pt}\section{\hskip -1em.~~#1}\vspace{-3pt}} 
 \newcommand{\SubSection}[1]{\vspace{-3pt}\subsection{\hskip -1em.~~#1}
      	\vspace{-3pt}}
-
+\newcommand{\SubSubSection}[1]{\vspace{-2pt}\subsubsection{\hskip -1em.~~#1}
+	\vspace{-2pt}}
 
 \begin{document}
 
@@ -127,10 +128,145 @@ is edited, deleted, renamed, copied etc.
 The kernel module obtains all this information and using NetSockets sends it 
 to the user space program.
 
-TODO : cla show us how it's done
+\SubSubSection{File-system event-monitoring mechanism}
+We have designed a file-system event-monitoring mechanism in the Linux kernel 
+that checks for file-system changes like file creation, deletion, modification, 
+and renaming. Once a watch for a directory is registered , the kernel adds 
+all event notifications for that file in a queue, and sends them out to 
+the server as soon as possible.
+
+The basic idea is to intercept “interesting” system calls by replacing the 
+original routine with another one that adds an item containing system call 
+number and file path into a queue. We have built a kernel module that does 
+the interception, queues updates and starts a kernel thread that is 
+scheduled from time to time and sends all items found in our queue to our 
+user-space program via netlink socket. The user-space program is responsible 
+for calling Java code in the server(responsible with the actual indexing 
+and searching) using JNI.
+
+To eliminate unnecessary event processing, such as indexing temporary files 
+that only exist for a short time or system files we will only index regular 
+files/folders marked to be monitored.
+
+Since the file indexing operations should not become a burden on the 
+system, we will index files   only when the system is first installed. Also, 
+the event-monitoring mechanism works so that intercepted  file-system 
+changes will be queued and sent from time to time to the server. 
+
+\SubSubSection{Intercepting system calls}
+
+The easy and fast way to intercept file-system changes is to intercept 
+file-system related system calls. 
+
+The operating system maintains a “system call table” that has pointers 
+to the functions that implement the system calls inside the kernel. 
+From the program's point of view, this list of system calls provides 
+a well-defined interface to the operating system services. You can 
+obtain a list of the different system calls by looking at the file 
+/usr/include/sys/syscall.h.
+
+Assume that we want to intercept the write system call and send a 
+message to our user-space program when any process invokes it. In order 
+to do this, we have to write our own fake write system call, then make 
+the kernel call our fake write function instead of the original write 
+call. At the end of our fake write call, we can invoke the original write 
+call. In order to do this, we must manipulate the system call table array 
+(sys\_call\_table). Armed with the sys\_call\_table array, we can manipulate 
+it to make the sys\_write entry point to our new fake write call. We must 
+store a pointer to the original sys\_write call and call it when we are 
+done sending our message to user-space. 
+
+
+\SubSubSection{Using netlink socket}
+We have used netlink socket to send asynchronous updates from our 
+intercepting system calls kernel module to an user-space C++ program 
+that acts as an intermediate layer between the file-system event-monitoring 
+mechanism and the server written in Java that does the indexing and needs these updates. 
+
+Netlink socket is a special IPC used for transferring information between 
+kernel and user-space processes. It provides a full-duplex communication 
+link between the two by way of standard socket APIs for user-space 
+processes and a special kernel API for kernel modules. Each netlink 
+socket feature defines its own protocol type in the kernel header file 
+include/linux/netlink.h. 
+
+Why use netlink instead of system calls, ioctls or proc filesystems for 
+communication between user and kernel worlds? It is a nontrivial task 
+to add system calls, ioctls or proc files for new features; we risk 
+polluting the kernel and damaging the stability of the system. Netlink 
+socket is simple, though: only a constant, the protocol type, needs to 
+be added to netlink.h. Then, the kernel module and application can talk 
+using socket-style APIs immediately. 
+
+Netlink is asynchronous because, as with any other socket API, it provides 
+a socket queue to smooth the burst of messages. The system call for 
+sending a netlink message queues the message to the receiver's netlink 
+queue and then invokes the receiver's reception handler. The receiver, 
+within the reception handler's context, can decide whether to process 
+the message immediately or leave the message in the queue and process 
+it later in a different context. Unlike netlink, system calls require 
+synchronous processing. Therefore, if we use a system call to pass a 
+message from user space to the kernel, the kernel scheduling granularity 
+may be affected if the time to process that message is long. 
+
+The code implementing a system call in the kernel is linked statically 
+to the kernel in compilation time; thus, it is not appropriate to include 
+system call code in a loadable module, which is the case for most device 
+drivers. With netlink socket, no compilation time dependency exists 
+between the netlink core of Linux kernel and the netlink application 
+living in loadable kernel modules. 
+
+Netlink socket supports multicast, which is another benefit over system 
+calls, ioctls and proc. One process can multicast a message to a netlink 
+group address, and any number of other processes can listen to that 
+group address. This provides a near-perfect mechanism for event 
+distribution from kernel to user space. 
+
+System call and ioctl are simplex IPCs in the sense that a session for 
+these IPCs can be initiated only by user-space applications. But, what 
+if a kernel module has an urgent message for a user-space application? 
+There is no way of doing that directly using these IPCs. Normally, 
+applications periodically need to poll the kernel to get the state 
+changes, although intensive polling is expensive. Netlink solves this 
+problem gracefully by allowing the kernel to initiate sessions too. 
+We call it the duplex characteristic of the netlink socket. 
+
+Finally, netlink socket provides a BSD socket-style API that is well 
+understood by the software development community. Therefore, training 
+costs are less as compared to using the rather cryptic system call 
+APIs and ioctls. 
+
+\SubSubSection{Java Native Interface}
+
+We have used JNI to send messages from the kernel module that intercepts 
+the file-system related system calls to the server that does the indexing.  
+
+JNI is a programming framework that allows Java code running in the 
+Java virtual machine(JVM) to call and be called by native applications 
+(programs specific to a hardware and operating system platform) and 
+libraries written in other languages, such as C, C++ and assembly.
+
 
 \SubSection{User-space}
 
+\SubSubSection{User interaction}
+To interact with the user, we chose a shell interface rather than GUI interface 
+since we feel that the shell is more expressive and more powerful, while with 
+a GUI interface the operations that can be performed are restricted to those 
+that are explicitly implemented.
+ 
+You can use the user-space program “intercept” to control the server configuration,
+loading the kernel module and for managing  our semantic file system by creating 
+tags, adding them to files, monitoring interesting folders and searching. 
+
+Also, the usual commands are modified to reflect the new flattened file system 
+put in place by our semantic file system and virtual folders. In order for 
+the user to interact efficiently with the system, we had to rethink the classical 
+shell paradigm. Since folders are virtual, there is no longer a real notion of 
+being inside of a directory. With Virtual Folders there no longer exists a 
+clear, predefined hierarchy .
+
+\SubSubSection{Document processing and search}
 The Java application uses Lucene ( a high performance text search engine 
 library) to mantain the index and search through it. 
 
